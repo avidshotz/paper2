@@ -1,0 +1,27 @@
+{
+  "name": "job-taylor-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension that uses OpenAI API to generate tailored resume and cover letter recommendations",
+  "main": "api/tailor.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "build": "echo 'No build step required for serverless functions'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "openai",
+    "resume",
+    "job-search",
+    "ai"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 

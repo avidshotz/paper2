@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/tailor.js": {
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/tailor",
+      "dest": "/api/tailor.js"
+    }
+  ]
+} 

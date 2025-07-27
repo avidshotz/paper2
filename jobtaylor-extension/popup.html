@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JobTaylor</title>
   <style>
     body {
@@ -59,10 +60,17 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
     }
 
     button:hover {
       background: #4338ca;
+    }
+
+    button:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
     }
 
     pre {
@@ -76,31 +84,366 @@
       max-height: 200px;
       overflow-y: auto;
     }
+
+    #manageResumesBtn {
+      background: #059669;
+      margin-bottom: 8px;
+    }
+
+    #manageResumesBtn:hover {
+      background: #047857;
+    }
+
+    #loadResumeBtn {
+      background: #7c3aed;
+      margin-bottom: 8px;
+    }
+
+    #loadResumeBtn:hover {
+      background: #6d28d9;
+    }
+
+    .resume-manager {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .resume-manager h3 {
+      margin: 0 0 8px 0;
+      color: #1e293b;
+      font-size: 1rem;
+    }
+
+    .resume-manager label {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .resume-manager textarea {
+      border: 1px solid #d1d5db;
+      background: #fff;
+    }
+
+    .resume-manager textarea:focus {
+      border-color: #3b82f6;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Safari compatibility */
+    * {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    textarea, pre {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    /* Button variants */
+    .btn-success {
+      background: #10b981 !important;
+      margin-right: 5px;
+    }
+
+    .btn-success:hover {
+      background: #059669 !important;
+    }
+
+    .btn-primary {
+      background: #3b82f6 !important;
+      margin-right: 5px;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb !important;
+    }
+
+    .btn-secondary {
+      background: #6b7280 !important;
+      margin-right: 5px;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563 !important;
+    }
+
+    /* Resume manager styles */
+    .resume-manager-header {
+      margin-bottom: 10px;
+    }
+
+    .resume-manager-header h3 {
+      margin: 0 0 10px 0;
+      color: #1e293b;
+    }
+
+    .resume-manager-header p {
+      margin: 0;
+      color: #64748b;
+    }
+
+    .resume-manager-section {
+      margin-bottom: 10px;
+    }
+
+    .resume-manager-section textarea {
+      width: 100%;
+      height: 120px;
+      margin-top: 5px;
+    }
+
+    .resume-manager-section:nth-child(3) textarea {
+      height: 150px;
+    }
+
+    .resume-manager-buttons {
+      margin-bottom: 10px;
+    }
+
+    .resume-manager-buttons button {
+      width: auto;
+      margin-right: 5px;
+    }
+
+    .resume-manager-tip {
+      margin-top: 10px;
+      font-size: 0.8em;
+      color: #666;
+    }
+
+    /* Preview styles */
+    .preview-header {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .preview-header h3 {
+      margin: 0 0 10px 0;
+      color: #1e293b;
+    }
+
+    .preview-header p {
+      margin: 0 0 8px 0;
+      font-size: 0.9em;
+      color: #64748b;
+    }
+
+    .preview-section {
+      margin-bottom: 15px;
+    }
+
+    .preview-section h4 {
+      margin: 0 0 8px 0;
+      color: #374151;
+    }
+
+    .preview-content {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85em;
+      white-space: pre-wrap;
+    }
+
+    .preview-actions {
+      margin-top: 10px;
+    }
+
+    .preview-actions button {
+      width: auto;
+      margin-right: 5px;
+    }
+
+    /* Resume list styles */
+    .resume-list-header {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .resume-list-header h3 {
+      margin: 0 0 10px 0;
+      color: #1e293b;
+    }
+
+    .resume-list-header p {
+      margin: 0;
+      font-size: 0.9em;
+      color: #64748b;
+    }
+
+    .resume-item {
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+
+    .resume-item.has-content {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+    }
+
+    .resume-item.empty {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+    }
+
+    .resume-item-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .resume-item-content h4 {
+      margin: 0 0 4px 0;
+      color: #1e293b;
+    }
+
+    .resume-item-content p {
+      margin: 0;
+      font-size: 0.8em;
+      color: #64748b;
+    }
+
+    .resume-icon {
+      font-size: 1.2em;
+    }
+
+    /* Resume detail styles */
+    .resume-detail-header {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .resume-detail-header h3 {
+      margin: 0 0 8px 0;
+      color: #1e293b;
+    }
+
+    .resume-detail-header p {
+      margin: 0;
+      font-size: 0.9em;
+      color: #64748b;
+    }
+
+    .resume-detail-section {
+      margin-bottom: 15px;
+    }
+
+    .resume-detail-section h4 {
+      margin: 0 0 8px 0;
+      color: #374151;
+    }
+
+    .resume-detail-content {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85em;
+      white-space: pre-wrap;
+    }
+
+    .resume-empty-message {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+
+    .resume-empty-message p {
+      margin: 0;
+      color: #dc2626;
+    }
+
+    .resume-detail-actions {
+      margin-top: 10px;
+    }
+
+    .resume-detail-actions button {
+      width: auto;
+      margin-right: 5px;
+    }
+
+    /* Success message styles */
+    .success-message {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .success-message p {
+      margin: 0;
+      color: #065f46;
+    }
+
+    .success-message p:last-child {
+      margin: 5px 0 0 0;
+      font-size: 0.9em;
+      color: #047857;
+    }
+
+    /* Load actions styles */
+    .load-actions {
+      margin-top: 10px;
+    }
+
+    .load-actions button {
+      width: auto;
+      margin-right: 5px;
+    }
   </style>
 </head>
 <body>
   <div class="logo">
-    <img src="icon48.png" alt="icon" />
+    <img src="icon48.png" alt="JobTaylor Logo" />
     <h2>JobTaylor</h2>
   </div>
 
   <label for="resumeSelect">📂 Select Resume:</label>
-  <select id="resumeSelect">
-    <option value="demo-resume-id">Marketing Resume</option>
-    <option value="dev-resume-id">Developer Resume</option>
-    <option value="custom-resume-id">Custom Resume</option>
+  <select id="resumeSelect" name="resumeSelect" aria-label="Select resume template">
+    <option value="resume-1">Professional Resume</option>
+    <option value="resume-2">Technical Resume</option>
+    <option value="resume-3">Creative Resume</option>
+    <option value="resume-4">Custom Resume</option>
   </select>
 
   <label for="jobDesc">📄 Job Description:</label>
-  <textarea id="jobDesc" placeholder="Loading..."></textarea>
+  <textarea id="jobDesc" name="jobDesc" placeholder="Paste the job description here..." aria-label="Job description input"></textarea>
 
-  <button id="generateBtn">🪄 Tailor with AI</button>
-  <button id="viewResumeBtn">🧾 View Tailored Resume</button>
-  <button id="viewCoverBtn">✉️ View Cover Letter</button>
-  <button id="downloadBtn">📥 Download PDF</button>
-  <button id="regenerateBtn">🔄 Regenerate</button>
+  <button id="manageResumesBtn" title="Manage and edit your resume templates" aria-label="Manage resumes">📝 Manage Resumes</button>
+  <button id="loadResumeBtn" title="Load a resume file from your computer" aria-label="Load resume file">📂 Load Resume</button>
+  <button id="generateBtn" title="Generate AI-tailored resume and cover letter" aria-label="Generate tailored content">🪄 Tailor with AI</button>
+  <button id="viewResumeBtn" title="View the generated tailored resume" aria-label="View tailored resume">🧾 View Tailored Resume</button>
+  <button id="viewCoverBtn" title="View the generated cover letter" aria-label="View cover letter">✉️ View Cover Letter</button>
+  <button id="downloadBtn" title="Download the generated content as a file" aria-label="Download content">📥 Download PDF</button>
+  <button id="regenerateBtn" title="Regenerate the tailored content" aria-label="Regenerate content">🔄 Regenerate</button>
 
-  <pre id="output"></pre>
+  <pre id="output" role="status" aria-live="polite"></pre>
 
   <script src="popup.js"></script>
 </body>

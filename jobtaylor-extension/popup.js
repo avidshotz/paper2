@@ -1,67 +1,48 @@
 // popup.js
 
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded');
+});
+
 // Load Resume function
 function showLoadResume() {
     console.log('=== showLoadResume function called ===');
-    alert('Load Resume function is working!'); // Temporary test alert
     
-    // Check if output element exists
-    const outputElement = document.getElementById('output');
-    if (!outputElement) {
-        console.error('Output element not found!');
-        alert('Error: Output element not found');
-        return;
-    }
+    // Create a hidden file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.txt,.doc,.docx,.pdf';
+    fileInput.style.display = 'none';
+    fileInput.id = 'hiddenFileInput';
+    fileInput.name = 'resumeFile';
     
-    console.log('Output element found, showing interface...');
-    
-    // Show a simple interface first
-    outputElement.innerHTML = `
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-            <h3 style="margin: 0 0 10px 0; color: #1e293b;">📂 Load Resume File</h3>
-            <p style="margin: 0; font-size: 0.9em; color: #64748b;">Select a resume file to load into the current slot</p>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-            <label for="resumeFileInput" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
-                📄 Select Resume File:
-            </label>
-            <input type="file" id="resumeFileInput" accept=".txt,.doc,.docx,.pdf" 
-                   style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff;">
-            <p style="margin: 5px 0 0 0; font-size: 0.8em; color: #64748b;">
-                Supported formats: .txt, .doc, .docx, .pdf
-            </p>
-        </div>
-        
-        <div style="margin-bottom: 10px;">
-            <button id="processFileBtn" style="background: #10b981; margin-right: 5px;">📤 Load File</button>
-            <button id="cancelLoadBtn" style="background: #6b7280;">❌ Cancel</button>
-        </div>
-    `;
-    
-    // Add event listener for the process button
-    document.getElementById('processFileBtn').addEventListener('click', function() {
-        const fileInput = document.getElementById('resumeFileInput');
-        if (fileInput.files[0]) {
-            processLoadedResume(fileInput.files[0]);
-        } else {
-            alert('Please select a file first.');
-        }
-    });
-    
-    // Add event listener for the cancel button
-    document.getElementById('cancelLoadBtn').addEventListener('click', function() {
-        clearLoadResume();
-    });
-    
-    // Also add change listener for immediate processing
-    document.getElementById('resumeFileInput').addEventListener('change', function(e) {
+    // Add event listener for file selection
+    fileInput.addEventListener('change', function(e) {
         console.log('File selected:', e.target.files[0]);
         if (e.target.files[0]) {
-            // Auto-process the file
             processLoadedResume(e.target.files[0]);
         }
     });
+    
+    // Add to DOM temporarily
+    document.body.appendChild(fileInput);
+    
+    // Trigger file selection dialog
+    try {
+        fileInput.click();
+        console.log('File dialog triggered');
+    } catch (error) {
+        console.error('Error triggering file dialog:', error);
+        alert('Error opening file dialog. Please try again.');
+    }
+    
+    // Clean up after a delay
+    setTimeout(() => {
+        if (document.getElementById('hiddenFileInput')) {
+            document.body.removeChild(fileInput);
+        }
+    }, 1000);
 }
 
 window.onload = function () {
@@ -70,10 +51,12 @@ window.onload = function () {
     // Load saved data on startup
     loadSavedData();
     
-    // Set up event listeners
-    setupEventListeners();
+    // Set up event listeners with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        setupEventListeners();
+    }, 50);
     
-    // Fallback: try to set up load resume button again after a short delay
+    // Fallback: try to set up load resume button again after a longer delay
     setTimeout(() => {
         const loadBtn = document.getElementById('loadResumeBtn');
         if (loadBtn && !loadBtn.hasAttribute('data-listener-attached')) {
@@ -81,7 +64,7 @@ window.onload = function () {
             loadBtn.setAttribute('data-listener-attached', 'true');
             loadBtn.addEventListener('click', showLoadResume);
         }
-    }, 100);
+    }, 200);
 };
 
 async function loadSavedData() {
@@ -97,9 +80,9 @@ async function loadSavedData() {
         ]);
         
         // Load job description
-      if (result.jobText) {
-        document.getElementById('jobDesc').value = result.jobText;
-      }
+        if (result.jobText) {
+            document.getElementById('jobDesc').value = result.jobText;
+        }
         
         // Initialize user resumes if not exists
         if (!result.userResumes) {
@@ -138,28 +121,44 @@ async function loadSavedData() {
 }
 
 function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
+    // Helper function to safely add event listeners
+    function addEventListenerSafely(elementId, event, handler) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            console.log(`Adding event listener to ${elementId}`);
+            element.addEventListener(event, handler);
+        } else {
+            console.error(`Element ${elementId} not found!`);
+        }
+    }
+    
     // Generate button
-    document.getElementById('generateBtn').addEventListener('click', handleGenerate);
+    addEventListenerSafely('generateBtn', 'click', handleGenerate);
     
     // View buttons
-    document.getElementById('viewResumeBtn').addEventListener('click', () => viewSavedContent('resume'));
-    document.getElementById('viewCoverBtn').addEventListener('click', () => viewSavedContent('cover'));
+    addEventListenerSafely('viewResumeBtn', 'click', () => viewSavedContent('resume'));
+    addEventListenerSafely('viewCoverBtn', 'click', () => viewSavedContent('cover'));
     
     // Download button
-    document.getElementById('downloadBtn').addEventListener('click', downloadContent);
+    addEventListenerSafely('downloadBtn', 'click', downloadContent);
     
     // Regenerate button
-    document.getElementById('regenerateBtn').addEventListener('click', handleGenerate);
+    addEventListenerSafely('regenerateBtn', 'click', handleGenerate);
     
     // Resume selection change
-    document.getElementById('resumeSelect').addEventListener('change', (e) => {
-        chrome.storage.local.set({ selectedResumeId: e.target.value });
-        loadSelectedResumeContent();
-    });
+    const resumeSelect = document.getElementById('resumeSelect');
+    if (resumeSelect) {
+        resumeSelect.addEventListener('change', (e) => {
+            chrome.storage.local.set({ selectedResumeId: e.target.value });
+            loadSelectedResumeContent();
+        });
+    }
     
     // Add resume management buttons
-    document.getElementById('manageResumesBtn').addEventListener('click', showResumeManager);
-    document.getElementById('saveResumeBtn').addEventListener('click', saveCurrentResume);
+    addEventListenerSafely('manageResumesBtn', 'click', showResumeManager);
+    // Note: saveResumeBtn is created dynamically, so we'll add its listener when it's created
     
     // Add load resume button if it exists
     const loadBtn = document.getElementById('loadResumeBtn');
@@ -178,6 +177,8 @@ function setupEventListeners() {
     } else {
         console.error('Load Resume button not found!');
     }
+    
+    console.log('Event listeners setup complete');
 }
 
 function updateResumeSelector() {
@@ -248,31 +249,29 @@ async function saveCurrentResume() {
 function showResumeManager() {
     const outputElement = document.getElementById('output');
     outputElement.innerHTML = `
-        <div style="margin-bottom: 10px;">
+        <div class="resume-manager-header">
             <h3>📝 Resume Manager</h3>
             <p>Manage your 4 resume slots with full experience details:</p>
         </div>
         
-        <div style="margin-bottom: 10px;">
+        <div class="resume-manager-section">
             <label for="resumeContent"><strong>Current Resume Content:</strong></label>
-            <textarea id="resumeContent" placeholder="Paste your current resume here..." 
-                      style="width: 100%; height: 120px; margin-top: 5px;"></textarea>
+            <textarea id="resumeContent" name="resumeContent" placeholder="Paste your current resume here..."></textarea>
         </div>
         
-        <div style="margin-bottom: 10px;">
+        <div class="resume-manager-section">
             <label for="experienceContent"><strong>📋 Full Experience Details (for GPT):</strong></label>
-            <textarea id="experienceContent" 
-                      placeholder="Include ALL your experience, skills, projects, achievements, certifications, education, etc. This gives GPT maximum context to tailor your resume..." 
-                      style="width: 100%; height: 150px; margin-top: 5px;"></textarea>
+            <textarea id="experienceContent" name="experienceContent"
+                      placeholder="Include ALL your experience, skills, projects, achievements, certifications, education, etc. This gives GPT maximum context to tailor your resume..."></textarea>
         </div>
         
-        <div style="margin-bottom: 10px;">
-            <button id="saveResumeBtn" style="background: #10b981; margin-right: 5px;">💾 Save Resume</button>
-            <button id="previewResumeBtn" style="background: #3b82f6; margin-right: 5px;">👁️ Preview Resume</button>
-            <button onclick="clearResumeManager()" style="background: #6b7280;">❌ Close</button>
+        <div class="resume-manager-buttons">
+            <button id="saveResumeBtn" class="btn-success">💾 Save Resume</button>
+            <button id="previewResumeBtn" class="btn-primary">👁️ Preview Resume</button>
+            <button id="closeResumeManagerBtn" class="btn-secondary">❌ Close</button>
         </div>
         
-        <div style="margin-top: 10px; font-size: 0.8em; color: #666;">
+        <div class="resume-manager-tip">
             💡 <strong>Tip:</strong> The more detailed your experience section, the better GPT can tailor your resume to specific job descriptions!
         </div>
     `;
@@ -280,8 +279,10 @@ function showResumeManager() {
     // Load current resume content
     loadSelectedResumeContent();
     
-    // Add preview button event listener
+    // Add event listeners for dynamically created buttons
+    document.getElementById('saveResumeBtn').addEventListener('click', saveCurrentResume);
     document.getElementById('previewResumeBtn').addEventListener('click', previewCurrentResume);
+    document.getElementById('closeResumeManagerBtn').addEventListener('click', clearResumeManager);
 }
 
 function clearResumeManager() {
@@ -301,31 +302,33 @@ function previewCurrentResume() {
     
     const outputElement = document.getElementById('output');
     outputElement.innerHTML = `
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-            <h3 style="margin: 0 0 10px 0; color: #1e293b;">👁️ Resume Preview</h3>
-            <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #64748b;">Selected Resume: ${getResumeNameById(selectedId)}</p>
+        <div class="preview-header">
+            <h3>👁️ Resume Preview</h3>
+            <p>Selected Resume: ${getResumeNameById(selectedId)}</p>
         </div>
         
         ${resumeContent ? `
-        <div style="margin-bottom: 15px;">
-            <h4 style="margin: 0 0 8px 0; color: #374151;">📄 Current Resume Content:</h4>
-            <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em; white-space: pre-wrap;">
+        <div class="preview-section">
+            <h4>📄 Current Resume Content:</h4>
+            <div class="preview-content">
                 ${resumeContent}
             </div>
         </div>
         ` : ''}
         
         ${experienceContent ? `
-        <div style="margin-bottom: 15px;">
-            <h4 style="margin: 0 0 8px 0; color: #374151;">📋 Full Experience Details (for GPT):</h4>
-            <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em; white-space: pre-wrap;">
+        <div class="preview-section">
+            <h4>📋 Full Experience Details (for GPT):</h4>
+            <div class="preview-content">
                 ${experienceContent}
             </div>
         </div>
         ` : ''}
         
-        <button onclick="showResumeManager()" style="background: #6b7280; margin-right: 5px;">← Back to Editor</button>
-        <button onclick="viewAllResumes()" style="background: #8b5cf6;">📋 View All Resumes</button>
+        <div class="preview-actions">
+            <button onclick="showResumeManager()" class="btn-secondary">← Back to Editor</button>
+            <button onclick="viewAllResumes()" class="btn-primary">📋 View All Resumes</button>
+        </div>
     `;
 }
 
@@ -345,9 +348,9 @@ function viewAllResumes() {
         const outputElement = document.getElementById('output');
         
         let html = `
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-                <h3 style="margin: 0 0 10px 0; color: #1e293b;">📋 All Saved Resumes</h3>
-                <p style="margin: 0; font-size: 0.9em; color: #64748b;">Click on any resume to view its content</p>
+            <div class="resume-list-header">
+                <h3>📋 All Saved Resumes</h3>
+                <p>Click on any resume to view its content</p>
             </div>
         `;
         
@@ -356,23 +359,23 @@ function viewAllResumes() {
             const lastUpdated = resume.lastUpdated ? new Date(resume.lastUpdated).toLocaleDateString() : 'Never';
             
             html += `
-                <div style="background: ${hasContent ? '#ecfdf5' : '#fef2f2'}; border: 1px solid ${hasContent ? '#a7f3d0' : '#fecaca'}; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" 
+                <div class="resume-item ${hasContent ? 'has-content' : 'empty'}" 
                      onclick="viewSpecificResume('${resume.id}')">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="resume-item-content">
                         <div>
-                            <h4 style="margin: 0 0 4px 0; color: #1e293b;">${resume.name}</h4>
-                            <p style="margin: 0; font-size: 0.8em; color: #64748b;">
+                            <h4>${resume.name}</h4>
+                            <p>
                                 ${hasContent ? '✅ Has content' : '❌ Empty'} • Last updated: ${lastUpdated}
                             </p>
                         </div>
-                        <div style="font-size: 1.2em;">${hasContent ? '📄' : '📭'}</div>
+                        <div class="resume-icon">${hasContent ? '📄' : '📭'}</div>
                     </div>
                 </div>
             `;
         });
         
         html += `
-            <button onclick="showResumeManager()" style="background: #6b7280; margin-top: 10px;">← Back to Editor</button>
+            <button onclick="showResumeManager()" class="btn-secondary">← Back to Editor</button>
         `;
         
         outputElement.innerHTML = html;
@@ -393,17 +396,17 @@ function viewSpecificResume(resumeId) {
         const lastUpdated = resume.lastUpdated ? new Date(resume.lastUpdated).toLocaleString() : 'Never';
         
         let html = `
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-                <h3 style="margin: 0 0 8px 0; color: #1e293b;">📄 ${resume.name}</h3>
-                <p style="margin: 0; font-size: 0.9em; color: #64748b;">Last updated: ${lastUpdated}</p>
+            <div class="resume-detail-header">
+                <h3>📄 ${resume.name}</h3>
+                <p>Last updated: ${lastUpdated}</p>
             </div>
         `;
         
         if (resume.content) {
             html += `
-                <div style="margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 8px 0; color: #374151;">📄 Resume Content:</h4>
-                    <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em; white-space: pre-wrap;">
+                <div class="resume-detail-section">
+                    <h4>📄 Resume Content:</h4>
+                    <div class="resume-detail-content">
                         ${resume.content}
                     </div>
                 </div>
@@ -412,9 +415,9 @@ function viewSpecificResume(resumeId) {
         
         if (resume.experience) {
             html += `
-                <div style="margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 8px 0; color: #374151;">📋 Experience Details:</h4>
-                    <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em; white-space: pre-wrap;">
+                <div class="resume-detail-section">
+                    <h4>📋 Experience Details:</h4>
+                    <div class="resume-detail-content">
                         ${resume.experience}
                     </div>
                 </div>
@@ -423,17 +426,17 @@ function viewSpecificResume(resumeId) {
         
         if (!resume.content && !resume.experience) {
             html += `
-                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 10px; margin-bottom: 15px;">
-                    <p style="margin: 0; color: #dc2626;">❌ This resume has no content saved yet.</p>
+                <div class="resume-empty-message">
+                    <p>❌ This resume has no content saved yet.</p>
                 </div>
             `;
         }
         
         html += `
-            <div style="margin-top: 10px;">
-                <button onclick="selectResume('${resumeId}')" style="background: #10b981; margin-right: 5px;">✅ Select This Resume</button>
-                <button onclick="viewAllResumes()" style="background: #6b7280; margin-right: 5px;">← Back to All Resumes</button>
-                <button onclick="showResumeManager()" style="background: #8b5cf6;">📝 Edit Resumes</button>
+            <div class="resume-detail-actions">
+                <button onclick="selectResume('${resumeId}')" class="btn-success">✅ Select This Resume</button>
+                <button onclick="viewAllResumes()" class="btn-secondary">← Back to All Resumes</button>
+                <button onclick="showResumeManager()" class="btn-primary">📝 Edit Resumes</button>
             </div>
         `;
         
@@ -447,16 +450,14 @@ function selectResume(resumeId) {
     
     const outputElement = document.getElementById('output');
     outputElement.innerHTML = `
-        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 10px; margin-bottom: 10px;">
-            <p style="margin: 0; color: #065f46;">✅ Resume selected successfully!</p>
+        <div class="success-message">
+            <p>✅ Resume selected successfully!</p>
         </div>
-        <button onclick="showResumeManager()" style="background: #6b7280;">← Back to Editor</button>
+        <button onclick="showResumeManager()" class="btn-secondary">← Back to Editor</button>
     `;
     
     updateResumeSelector();
 }
-
-
 
 function processLoadedResume(file) {
     console.log('Processing file:', file.name, 'Type:', file.type);
@@ -493,16 +494,16 @@ function processLoadedResume(file) {
                 // Show success message
                 const outputElement = document.getElementById('output');
                 outputElement.innerHTML = `
-                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 10px; margin-bottom: 10px;">
-                        <p style="margin: 0; color: #065f46;">✅ Resume loaded successfully!</p>
-                        <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #047857;">
-                            File: ${file.name}<br>
-                            Slot: ${getResumeNameById(currentSlotId)}<br>
-                            Content length: ${resumeContent.length} characters
-                        </p>
+                    <div class="success-message">
+                        <p>✅ Resume loaded successfully!</p>
+                        <p>File: ${file.name}<br>
+                        Slot: ${getResumeNameById(currentSlotId)}<br>
+                        Content length: ${resumeContent.length} characters</p>
                     </div>
-                    <button onclick="showResumeManager()" style="background: #10b981; margin-right: 5px;">📝 Manage Resumes</button>
-                    <button onclick="clearLoadResume()" style="background: #6b7280;">❌ Close</button>
+                    <div class="load-actions">
+                        <button onclick="showResumeManager()" class="btn-success">📝 Manage Resumes</button>
+                        <button onclick="clearLoadResume()" class="btn-secondary">❌ Close</button>
+                    </div>
                 `;
                 
                 // Update the resume selector
@@ -531,15 +532,15 @@ function clearLoadResume() {
 }
 
 async function handleGenerate() {
-      const jobDescription = document.getElementById('jobDesc').value;
+    const jobDescription = document.getElementById('jobDesc').value;
     const selectedResumeId = document.getElementById('resumeSelect').value;
-      const outputElement = document.getElementById('output');
-      const generateBtn = document.getElementById('generateBtn');
-      
-      if (!jobDescription.trim()) {
+    const outputElement = document.getElementById('output');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    if (!jobDescription.trim()) {
         outputElement.innerText = 'Please enter a job description first.';
         return;
-      }
+    }
     
     // Get the selected resume content
     const result = await chrome.storage.local.get(['userResumes']);
@@ -550,30 +551,57 @@ async function handleGenerate() {
         outputElement.innerText = 'Please save a resume first using the "Manage Resumes" button.';
         return;
     }
-      
-      // Show loading state
-      generateBtn.disabled = true;
-      generateBtn.innerText = 'Generating...';
+    
+    // Log the plaintext content being sent to OpenAI
+    console.log('=== PLAINTEXT CONTENT FOR OPENAI ===');
+    console.log('📄 Job Description:', jobDescription);
+    console.log('📋 Current Resume Content:', selectedResume.content);
+    console.log('📋 Full Experience Details:', selectedResume.experience);
+    console.log('📂 Resume Name:', selectedResume.name);
+    console.log('🆔 Resume ID:', selectedResumeId);
+    console.log('👤 User ID:', 'demo-user');
+    
+    // Create the complete package being sent to OpenAI API
+    const openAIPackage = {
+        jobDescription,
+        resumeId: selectedResumeId,
+        userId: 'demo-user',
+        currentResume: selectedResume.content,
+        fullExperience: selectedResume.experience,
+        resumeName: selectedResume.name
+    };
+    
+    console.log('=== COMPLETE PACKAGE SENT TO OPENAI API ===');
+    console.log('📦 API Package:', JSON.stringify(openAIPackage, null, 2));
+    console.log('📊 Package Size:', JSON.stringify(openAIPackage).length, 'characters');
+    console.log('📊 Job Description Length:', jobDescription.length, 'characters');
+    console.log('📊 Resume Content Length:', selectedResume.content ? selectedResume.content.length : 0, 'characters');
+    console.log('📊 Experience Details Length:', selectedResume.experience ? selectedResume.experience.length : 0, 'characters');
+    console.log('=== END OF OPENAI PACKAGE ===');
+    
+    // Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerText = 'Generating...';
     outputElement.innerText = 'Analyzing job description and generating tailored recommendations...';
-      
-      try {
+    
+    try {
         const response = await fetch('https://your-vercel-app.vercel.app/api/tailor', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobDescription,
-                resumeId: selectedResumeId,
-                userId: 'demo-user',
-                currentResume: selectedResume.content,
-                fullExperience: selectedResume.experience,
-                resumeName: selectedResume.name
-          })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(openAIPackage)
         });
-  
+
         const data = await response.json();
         
+        console.log('=== OPENAI API RESPONSE ===');
+        console.log('📡 Response Status:', response.status, response.statusText);
+        console.log('📡 Response Data:', data);
+        console.log('📡 Response Success:', data.success);
+        console.log('📡 Response Result Length:', data.result ? data.result.length : 0, 'characters');
+        console.log('=== END OF API RESPONSE ===');
+        
         if (!response.ok) {
-          throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+            throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
         }
         
         if (data.success && data.result) {
@@ -590,16 +618,16 @@ async function handleGenerate() {
             updateButtonStates();
             
         } else {
-          outputElement.innerText = 'No recommendations generated. Please try again.';
+            outputElement.innerText = 'No recommendations generated. Please try again.';
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Error:', error);
         outputElement.innerText = `Error: ${error.message}. Please check your API configuration and try again.`;
-      } finally {
+    } finally {
         // Reset button state
         generateBtn.disabled = false;
         generateBtn.innerText = 'Generate Recommendations';
-      }
+    }
 }
 
 function parseAIResponse(response) {
@@ -720,7 +748,7 @@ function downloadContent() {
         }
         
         // Create and download file
-        const blob = new Blob([content], { type: 'text/plain' });
+        const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
