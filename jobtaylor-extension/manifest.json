@@ -4,21 +4,30 @@
   "version": "1.0",
   "description": "Instant resume tailoring from job descriptions.",
   "action": {
-  "default_popup": "popup.html",
-  "default_icon": {
-  "16": "icon16.png",
-  "48": "icon48.png",
-  "128": "icon128.png"
-  }
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "icons": {
-  "16": "icon16.png",
-  "48": "icon48.png",
-  "128": "icon128.png"
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "permissions": [
-  "storage",
-  "activeTab",
-  "scripting"
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-ancestors 'none';"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icon*.png"],
+      "matches": ["<all_urls>"]
+    }
   ]
-  }
+}

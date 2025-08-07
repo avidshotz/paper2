@@ -85,9 +85,30 @@ const response = await fetch('https://your-deployed-app.vercel.app/api/tailor', 
 - Use appropriate models (gpt-4 is more expensive than gpt-3.5-turbo)
 - Set up billing alerts
 
+## Testing
+
+### Test the API Endpoint
+```bash
+# Test with local development server
+npm run test
+
+# Or test with a specific API URL
+API_URL=https://your-deployed-app.vercel.app/api/tailor npm run test
+```
+
+### Development Commands
+```bash
+# Start local development server
+npm start
+
+# Deploy to production
+npm run deploy
+```
+
 ## Troubleshooting
 
 1. **API Key Error**: Ensure `OPENAI_API_KEY` is set in your environment variables
 2. **CORS Issues**: Make sure your API endpoint allows requests from your extension
 3. **Rate Limits**: OpenAI has rate limits; implement retry logic if needed
-4. **Token Limits**: Job descriptions might be too long; consider truncating if needed 
+4. **Token Limits**: Job descriptions might be too long; consider truncating if needed
+5. **Test Failures**: If tests fail, make sure your API endpoint is running locally (`npm start`) or deployed to Vercel 
