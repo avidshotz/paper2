@@ -1,9 +1,309 @@
 // popup.js
 
+// Authentication state
+let auth = null;
+let isAuthenticated = false;
+let currentUser = null;
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded');
+    initAuth();
 });
+
+// Initialize authentication
+async function initAuth() {
+    try {
+        console.log('🔧 Initializing authentication...');
+        
+        // Try to get RezlieAuth from window object first (since auth.js is loaded as script)
+        let RezlieAuth = window.RezlieAuth;
+        
+        if (!RezlieAuth) {
+            console.log('⚠️ RezlieAuth not found on window, trying ES6 import...');
+            try {
+                const module = await import('./auth.js');
+                console.log('🔍 Imported module:', module);
+                RezlieAuth = module.RezlieAuth;
+                console.log('🔍 RezlieAuth from module:', RezlieAuth);
+                console.log('✅ RezlieAuth imported successfully via ES6 import');
+            } catch (importError) {
+                console.error('❌ ES6 import also failed:', importError);
+                throw new Error('RezlieAuth not available');
+            }
+        } else {
+            console.log('✅ RezlieAuth found on window object');
+            console.log('🔍 RezlieAuth from window:', RezlieAuth);
+        }
+        
+        if (typeof RezlieAuth !== 'function') {
+            throw new Error('RezlieAuth is not a constructor function');
+        }
+        
+        auth = new RezlieAuth();
+        console.log('✅ Auth instance created');
+        
+        // Check authentication status
+        isAuthenticated = await auth.isAuthenticated();
+        console.log('🔍 Authentication status:', isAuthenticated);
+        
+        currentUser = await auth.getCurrentUser();
+        console.log('👤 Current user:', currentUser);
+        
+        // Update UI based on auth state
+        updateAuthUI();
+        console.log('🎨 UI updated');
+        
+        // Listen for auth state changes
+        auth.onAuthStateChange((event, session) => {
+            console.log('Auth state changed:', event, session ? 'User logged in' : 'User logged out');
+            isAuthenticated = !!session;
+            currentUser = session?.user || null;
+            updateAuthUI();
+        });
+        
+        console.log('✅ Authentication initialization complete');
+    } catch (error) {
+        console.error('❌ Failed to initialize authentication:', error);
+    }
+}
+
+// Update UI based on authentication state
+function updateAuthUI() {
+    const authStatus = document.getElementById('authStatus');
+    const authButton = document.getElementById('authButton');
+    const rateLimitInfo = document.getElementById('rateLimitInfo');
+    const userInfoBtn = document.getElementById('userInfoBtn');
+    
+    if (authStatus) {
+        if (isAuthenticated) {
+            authStatus.textContent = `Logged in as: ${currentUser?.email || 'User'}`;
+            authStatus.className = 'auth-status logged-in';
+        } else {
+            authStatus.textContent = 'Not logged in';
+            authStatus.className = 'auth-status logged-out';
+        }
+    }
+    
+    if (authButton) {
+        if (isAuthenticated) {
+            authButton.textContent = 'Sign Out';
+            authButton.onclick = signOut;
+        } else {
+            authButton.textContent = 'Sign In';
+            authButton.onclick = showSignInModal;
+        }
+    }
+    
+    // Update user info button
+    updateUserInfoButton();
+    
+    // Update rate limit info
+    updateRateLimitInfo();
+}
+
+// Show sign in modal
+function showSignInModal() {
+    console.log('🔧 showSignInModal called');
+    
+    const modal = document.createElement('div');
+    modal.className = 'auth-modal';
+    modal.innerHTML = `
+        <div class="auth-modal-content">
+                    <h3>Sign In to Rezlie</h3>
+        <p>Sign in to get unlimited resume generations and save your work.</p>
+            <form id="signInForm">
+                <input type="email" id="signInEmail" placeholder="Email" required>
+                <input type="password" id="signInPassword" placeholder="Password" required>
+                <button type="submit">Sign In</button>
+                <button type="button" id="createAccountBtn">Create Account</button>
+            </form>
+            <button class="close-modal" id="closeModalBtn">×</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    console.log('✅ Modal added to DOM');
+    
+    // Add event listeners after DOM is created
+    document.getElementById('createAccountBtn').addEventListener('click', showSignUpForm);
+    document.getElementById('closeModalBtn').addEventListener('click', closeAuthModal);
+    
+    // Handle sign in form
+    document.getElementById('signInForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('signInEmail').value;
+        const password = document.getElementById('signInPassword').value;
+        
+        try {
+            const result = await auth.signIn(email, password);
+            console.log('✅ Sign in successful:', result);
+            
+            // Update authentication state
+            isAuthenticated = true;
+            currentUser = result.user;
+            
+            // Trigger auth state change
+            auth.triggerAuthStateChange('SIGNED_IN', result);
+            
+            closeAuthModal();
+        } catch (error) {
+            alert('Sign in failed: ' + error.message);
+        }
+    });
+}
+
+// Show sign up form
+function showSignUpForm() {
+    const modal = document.querySelector('.auth-modal-content');
+    modal.innerHTML = `
+        <h3>Create Account</h3>
+        <p>Create a new account to get started with Rezlie.</p>
+        <form id="signUpForm">
+            <input type="email" id="signUpEmail" placeholder="Email" required>
+            <input type="password" id="signUpPassword" placeholder="Password" required>
+            <button type="submit">Create Account</button>
+            <button type="button" id="backToSignInBtn">Back to Sign In</button>
+        </form>
+        <button class="close-modal" id="closeModalBtn2">×</button>
+    `;
+    
+    // Add event listeners after DOM is created
+    document.getElementById('backToSignInBtn').addEventListener('click', showSignInModal);
+    document.getElementById('closeModalBtn2').addEventListener('click', closeAuthModal);
+    
+    // Handle sign up form
+    document.getElementById('signUpForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('signUpEmail').value;
+        const password = document.getElementById('signUpPassword').value;
+        
+        try {
+            const result = await auth.signUp(email, password);
+            console.log('✅ Sign up successful:', result);
+            
+            if (result.requiresEmailConfirmation) {
+                // Show email confirmation message with more details
+                alert('Account created! Please check your email to verify your account. After verification, you can sign in to use Rezlie.');
+                closeAuthModal();
+            } else if (result.user && result.session) {
+                // Auto-sign in if email is already confirmed
+                isAuthenticated = true;
+                currentUser = result.user;
+                auth.triggerAuthStateChange('SIGNED_IN', result);
+                alert('Account created and signed in successfully!');
+                closeAuthModal();
+            } else if (result.user) {
+                // User created but needs email verification
+                alert('Account created! Please check your email to verify your account. You can sign in after verification.');
+                closeAuthModal();
+            } else {
+                alert('Account created! Please check your email to verify your account.');
+                closeAuthModal();
+            }
+        } catch (error) {
+            console.error('Sign up error:', error);
+            alert('Sign up failed: ' + error.message);
+        }
+    });
+}
+
+// Close auth modal
+function closeAuthModal() {
+    const modal = document.querySelector('.auth-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Sign out
+async function signOut() {
+    try {
+        await auth.signOut();
+        
+        // Update authentication state
+        isAuthenticated = false;
+        currentUser = null;
+        
+        // Trigger auth state change
+        auth.triggerAuthStateChange('SIGNED_OUT', null);
+        
+        console.log('✅ Sign out successful');
+    } catch (error) {
+        console.error('Sign out error:', error);
+    }
+}
+
+// Update user info button
+async function updateUserInfoButton() {
+    const userInfoBtn = document.getElementById('userInfoBtn');
+    if (!userInfoBtn) return;
+    
+    if (isAuthenticated && currentUser) {
+        userInfoBtn.style.display = 'flex';
+        
+        // Update email
+        const emailSpan = userInfoBtn.querySelector('.user-email');
+        if (emailSpan) {
+            emailSpan.textContent = currentUser.email || 'Unknown';
+        }
+        
+        // Get rate limit info for credits
+        try {
+            const rateLimitInfo = await auth.getRateLimitInfo();
+            const creditsSpan = userInfoBtn.querySelector('.user-credits');
+            const subscriptionSpan = userInfoBtn.querySelector('.user-subscription');
+            
+            if (rateLimitInfo) {
+                const remaining = Math.max(0, (rateLimitInfo.monthly_limit || 10) - (rateLimitInfo.usage_count || 0));
+                if (creditsSpan) {
+                    creditsSpan.textContent = `Credits: ${remaining}`;
+                }
+                
+                if (subscriptionSpan) {
+                    subscriptionSpan.textContent = rateLimitInfo.is_paying_user ? 'Pro' : 'Free';
+                }
+            } else {
+                if (creditsSpan) {
+                    creditsSpan.textContent = 'Credits: --';
+                }
+                if (subscriptionSpan) {
+                    subscriptionSpan.textContent = 'Free';
+                }
+            }
+        } catch (error) {
+            console.error('Error getting rate limit info for user button:', error);
+            const creditsSpan = userInfoBtn.querySelector('.user-credits');
+            const subscriptionSpan = userInfoBtn.querySelector('.user-subscription');
+            if (creditsSpan) creditsSpan.textContent = 'Credits: --';
+            if (subscriptionSpan) subscriptionSpan.textContent = 'Free';
+        }
+    } else {
+        userInfoBtn.style.display = 'none';
+    }
+}
+
+// Update rate limit info
+async function updateRateLimitInfo() {
+    const rateLimitInfo = document.getElementById('rateLimitInfo');
+    if (!rateLimitInfo) return;
+    
+    try {
+        if (isAuthenticated) {
+            const rateLimitData = await auth.getRateLimitInfo();
+            if (rateLimitData) {
+                rateLimitInfo.textContent = `Monthly generations: ${rateLimitData.monthly_generations || 0} of 10`;
+            } else {
+                rateLimitInfo.textContent = 'Monthly generations: 0 of 10';
+            }
+        } else {
+            rateLimitInfo.textContent = 'Sign in to start generating resumes';
+        }
+    } catch (error) {
+        console.error('Error updating rate limit info:', error);
+        rateLimitInfo.textContent = 'Rate limit info unavailable';
+    }
+}
 
 // Load Resume function
 function showLoadResume() {
@@ -169,13 +469,15 @@ function setupEventListeners() {
             e.preventDefault();
             showLoadResume();
         });
-        
-        // Also add a simple test click handler
-        loadBtn.addEventListener('click', function() {
-            console.log('Simple click test - button is clickable');
-        });
     } else {
         console.error('Load Resume button not found!');
+    }
+    
+    // Add extract job description button if it exists
+    const extractBtn = document.getElementById('extractJobBtn');
+    if (extractBtn) {
+        console.log('Extract Job button found, adding event listener');
+        extractBtn.addEventListener('click', extractJobFromCurrentPage);
     }
     
     console.log('Event listeners setup complete');
@@ -531,6 +833,60 @@ function clearLoadResume() {
     outputElement.innerHTML = '';
 }
 
+async function extractJobFromCurrentPage() {
+    const outputElement = document.getElementById('output');
+    outputElement.innerText = 'Extracting job description from current page...';
+    
+    try {
+        // Get the active tab
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        if (!tab) {
+            outputElement.innerText = 'Error: Could not access current tab.';
+            return;
+        }
+        
+        // Check if we're on a supported job site
+        const supportedSites = [
+            'linkedin.com', 'indeed.com', 'glassdoor.com', 
+            'monster.com', 'careerbuilder.com', 'ziprecruiter.com', 
+            'simplyhired.com'
+        ];
+        
+        const isJobSite = supportedSites.some(site => tab.url.includes(site));
+        
+        if (!isJobSite) {
+            outputElement.innerText = 'Please navigate to a job posting page (LinkedIn, Indeed, Glassdoor, etc.) first.';
+            return;
+        }
+        
+        // Execute content script to extract job description
+        const results = await chrome.tabs.sendMessage(tab.id, { action: 'extractJobDescription' });
+        
+        if (results && results.jobText) {
+            // Update the job description textarea
+            document.getElementById('jobDesc').value = results.jobText;
+            
+            // Save to storage
+            await chrome.storage.local.set({ jobText: results.jobText });
+            
+            outputElement.innerText = `✅ Job description extracted successfully!\n\nLength: ${results.jobText.length} characters\n\nYou can now generate tailored recommendations.`;
+            
+            // Clear the message after 3 seconds
+            setTimeout(() => {
+                outputElement.innerText = '';
+            }, 3000);
+            
+        } else {
+            outputElement.innerText = 'No job description found on this page. Please make sure you\'re on a job posting page.';
+        }
+        
+    } catch (error) {
+        console.error('Error extracting job description:', error);
+        outputElement.innerText = 'Error extracting job description. Please refresh the page and try again.';
+    }
+}
+
 async function handleGenerate() {
     const jobDescription = document.getElementById('jobDesc').value;
     const selectedResumeId = document.getElementById('resumeSelect').value;
@@ -538,7 +894,7 @@ async function handleGenerate() {
     const generateBtn = document.getElementById('generateBtn');
     
     if (!jobDescription.trim()) {
-        outputElement.innerText = 'Please enter a job description first.';
+        outputElement.innerText = 'Please enter a job description first.\n\n💡 Tip: Click "Extract Job" to automatically extract job descriptions from job posting pages (LinkedIn, Indeed, Glassdoor, etc.)';
         return;
     }
     
@@ -549,6 +905,40 @@ async function handleGenerate() {
     
     if (!selectedResume || (!selectedResume.content && !selectedResume.experience)) {
         outputElement.innerText = 'Please save a resume first using the "Manage Resumes" button.';
+        return;
+    }
+    
+    // Check if job description looks like navigation content and show warning (but don't block)
+    const navigationKeywords = ['search', 'browse', 'post a job', 'employer', 'job seeker', 'career advice', 'mobile apps', 'trust and safety', 'support', 'about us', 'careers', 'investors', 'blog', 'press'];
+    const isLikelyNavigation = navigationKeywords.some(keyword => 
+        jobDescription.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    if (isLikelyNavigation) {
+        // Show warning with option to proceed
+        outputElement.innerHTML = `
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Warning</h4>
+                <p style="margin: 0 0 15px 0; color: #856404;">
+                    The job description appears to be navigation content rather than an actual job posting. 
+                    This might result in generic recommendations.
+                </p>
+                <p style="margin: 0 0 15px 0; color: #856404;">
+                    <strong>For best results:</strong> Use an actual job description from a job posting page.
+                </p>
+                <button id="proceedBtn" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+                    Proceed Anyway
+                </button>
+                <button id="cancelBtn" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners to the buttons
+        document.getElementById('proceedBtn').addEventListener('click', proceedWithNavigationContent);
+        document.getElementById('cancelBtn').addEventListener('click', clearOutput);
+        
         return;
     }
     
@@ -585,9 +975,28 @@ async function handleGenerate() {
     outputElement.innerText = 'Analyzing job description and generating tailored recommendations...';
     
     try {
-        const response = await fetch('https://your-vercel-app.vercel.app/api/tailor', {
+        // Call Supabase Edge Function instead of OpenAI directly
+        const SUPABASE_URL = 'https://sdlmyaffbnjkmzwpdwqp.supabase.co'; // TODO: Replace with your Supabase URL
+        
+        // Get authentication header if user is logged in
+        let authHeader = null;
+        if (auth && isAuthenticated) {
+            authHeader = await auth.getAuthHeader();
+        }
+        
+        // Prepare headers
+        const headers = { 
+            'Content-Type': 'application/json; charset=utf-8'
+        };
+        
+        // Add auth header if available
+        if (authHeader) {
+            headers['Authorization'] = authHeader;
+        }
+        
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            headers,
             body: JSON.stringify(openAIPackage)
         });
 
@@ -597,16 +1006,29 @@ async function handleGenerate() {
         console.log('📡 Response Status:', response.status, response.statusText);
         console.log('📡 Response Data:', data);
         console.log('📡 Response Success:', data.success);
-        console.log('📡 Response Result Length:', data.result ? data.result.length : 0, 'characters');
+        console.log('📡 Has Resume PDF:', !!data.resumePDF);
+        console.log('📡 Has Cover Letter PDF:', !!data.coverLetterPDF);
         console.log('=== END OF API RESPONSE ===');
+        console.log('📡 Full Response Data:', JSON.stringify(data, null, 2));
         
         if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+            throw new Error(data.error?.message || `HTTP ${response.status}: ${response.statusText}`);
         }
         
-        if (data.success && data.result) {
-            // Parse the response to extract resume and cover letter
-            const { tailoredResume, coverLetter } = parseAIResponse(data.result);
+        // Check if we have a successful response with PDF content
+        if (data.success && data.resumePDF && data.coverLetterPDF) {
+            // Save PDF data to storage
+            await saveGeneratedPDFs(data, jobDescription, selectedResumeId);
+            
+            // Display download options
+            updateOutputDisplay('pdfs', data);
+            
+            // Update button states
+            updateButtonStates();
+        } else if (data.success && (data.resumeContent || data.coverLetterContent)) {
+            // Handle text content response
+            const tailoredResume = data.resumeContent || '';
+            const coverLetter = data.coverLetterContent || '';
             
             // Save to persistent storage
             await saveGeneratedContent(tailoredResume, coverLetter, jobDescription, selectedResumeId);
@@ -616,9 +1038,8 @@ async function handleGenerate() {
             
             // Update button states
             updateButtonStates();
-            
         } else {
-            outputElement.innerText = 'No recommendations generated. Please try again.';
+            outputElement.innerText = 'No recommendations generated. Please try again.\n\nThis might be because:\n• The job description is too short or unclear\n• The API response format was unexpected\n• There was an issue with the content generation\n\nTry using a more detailed job description or check the console for more details.';
         }
     } catch (error) {
         console.error('Error:', error);
@@ -693,18 +1114,116 @@ async function saveGeneratedContent(tailoredResume, coverLetter, jobDescription,
     await chrome.storage.local.set({ resumeHistory: history });
 }
 
+async function saveGeneratedPDFs(pdfData, jobDescription, resumeId) {
+    const timestamp = new Date().toISOString();
+    
+    console.log('Saving PDF data to storage:', {
+        hasResumePDF: !!pdfData.resumePDF,
+        hasCoverLetterPDF: !!pdfData.coverLetterPDF,
+        resumeFileName: pdfData.resumeFileName,
+        coverLetterFileName: pdfData.coverLetterFileName,
+        hasResumeContent: !!pdfData.resumeContent,
+        hasCoverLetterContent: !!pdfData.coverLetterContent
+    });
+    
+    // Save PDF data
+    await chrome.storage.local.set({
+        resumePDF: pdfData.resumePDF,
+        coverLetterPDF: pdfData.coverLetterPDF,
+        resumeFileName: pdfData.resumeFileName,
+        coverLetterFileName: pdfData.coverLetterFileName,
+        resumeContent: pdfData.resumeContent,
+        coverLetterContent: pdfData.coverLetterContent,
+        lastGenerated: timestamp,
+        lastJobDescription: jobDescription,
+        lastResumeId: resumeId,
+        hasPDFs: true
+    });
+    
+    console.log('PDF data saved successfully to storage');
+    
+    // Add to history
+    const result = await chrome.storage.local.get(['resumeHistory']);
+    const history = result.resumeHistory || [];
+    
+    history.unshift({
+        id: Date.now().toString(),
+        timestamp,
+        resumeId,
+        jobDescription: jobDescription.substring(0, 100) + '...',
+        hasResume: !!pdfData.resumeContent,
+        hasCoverLetter: !!pdfData.coverLetterContent,
+        hasPDFs: true
+    });
+    
+    // Keep only last 10 entries
+    if (history.length > 10) {
+        history.splice(10);
+    }
+    
+    await chrome.storage.local.set({ resumeHistory: history });
+}
+
 function updateOutputDisplay(type, content) {
     const outputElement = document.getElementById('output');
     if (type === 'resume') {
         outputElement.innerText = `📄 TAILORED RESUME:\n\n${content}`;
     } else if (type === 'cover') {
         outputElement.innerText = `✉️ COVER LETTER:\n\n${content}`;
+    } else if (type === 'pdfs') {
+        outputElement.innerHTML = `
+            <div class="pdf-success">
+                <h3>✅ Documents Generated Successfully!</h3>
+                <p>Your tailored resume and cover letter are ready for download.</p>
+                
+                <div class="pdf-downloads">
+                    <button id="downloadResumeBtn" class="btn-success">
+                        📄 Download Resume (${content.resumeFileName})
+                    </button>
+                    <button id="downloadCoverBtn" class="btn-primary">
+                        ✉️ Download Cover Letter (${content.coverLetterFileName})
+                    </button>
+                </div>
+                
+                <div class="pdf-preview">
+                    <h4>Resume Preview:</h4>
+                    <div class="preview-content">${content.resumeContent ? content.resumeContent.substring(0, 200) + '...' : 'No preview available'}</div>
+                    
+                    <h4>Cover Letter Preview:</h4>
+                    <div class="preview-content">${content.coverLetterContent ? content.coverLetterContent.substring(0, 200) + '...' : 'No preview available'}</div>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners to the download buttons
+        document.getElementById('downloadResumeBtn').addEventListener('click', () => downloadPDF('resume'));
+        document.getElementById('downloadCoverBtn').addEventListener('click', () => downloadPDF('cover'));
     }
 }
 
 function viewSavedContent(type) {
-    chrome.storage.local.get([type === 'resume' ? 'tailoredResume' : 'coverLetter'], (result) => {
-        const content = type === 'resume' ? result.tailoredResume : result.coverLetter;
+    console.log('viewSavedContent called with type:', type);
+    
+    chrome.storage.local.get(['resumeContent', 'coverLetterContent', 'resumePDF', 'coverLetterPDF'], (result) => {
+        console.log('Storage data for viewSavedContent:', {
+            hasResumeContent: !!result.resumeContent,
+            hasCoverContent: !!result.coverLetterContent,
+            hasResumePDF: !!result.resumePDF,
+            hasCoverPDF: !!result.coverLetterPDF
+        });
+        
+        let content = null;
+        
+        if (type === 'resume') {
+            // Try to get the clean content first, then fallback to PDF content
+            content = result.resumeContent || (result.resumePDF ? extractContentFromPDF(result.resumePDF) : null);
+        } else {
+            // Try to get the clean content first, then fallback to PDF content
+            content = result.coverLetterContent || (result.coverLetterPDF ? extractContentFromPDF(result.coverLetterPDF) : null);
+        }
+        
+        console.log('Content found for', type, ':', !!content);
+        
         if (content) {
             updateOutputDisplay(type, content);
         } else {
@@ -713,32 +1232,87 @@ function viewSavedContent(type) {
     });
 }
 
+// Helper function to extract clean content from PDF HTML
+function extractContentFromPDF(pdfHtml) {
+    try {
+        // Remove the outer wrapper HTML and extract just the content
+        const contentMatch = pdfHtml.match(/<div class="content">([\s\S]*?)<\/div>/);
+        if (contentMatch) {
+            let content = contentMatch[1];
+            // Remove HTML tags and decode entities
+            content = content.replace(/<[^>]*>/g, '');
+            content = content.replace(/&nbsp;/g, ' ');
+            content = content.replace(/&lt;/g, '<');
+            content = content.replace(/&gt;/g, '>');
+            content = content.replace(/&amp;/g, '&');
+            return content.trim();
+        }
+        return null;
+    } catch (error) {
+        console.error('Error extracting content from PDF:', error);
+        return null;
+    }
+}
+
 function updateButtonStates() {
-    chrome.storage.local.get(['tailoredResume', 'coverLetter'], (result) => {
-        const hasResume = !!result.tailoredResume;
-        const hasCover = !!result.coverLetter;
+    chrome.storage.local.get(['resumeContent', 'coverLetterContent', 'resumePDF', 'coverLetterPDF'], (result) => {
+        const hasResumeContent = !!result.resumeContent;
+        const hasCoverContent = !!result.coverLetterContent;
+        const hasResumePDF = !!result.resumePDF;
+        const hasCoverPDF = !!result.coverLetterPDF;
+        
+        // Check if we have any resume content (either clean content or PDF)
+        const hasResume = hasResumeContent || hasResumePDF;
+        // Check if we have any cover letter content (either clean content or PDF)
+        const hasCover = hasCoverContent || hasCoverPDF;
+        // Check if we have any content at all
+        const hasAnyContent = hasResume || hasCover;
+        
+        console.log('Updating button states:', { 
+            hasResumeContent, 
+            hasCoverContent, 
+            hasResumePDF, 
+            hasCoverPDF,
+            hasResume,
+            hasCover,
+            hasAnyContent 
+        });
         
         document.getElementById('viewResumeBtn').disabled = !hasResume;
         document.getElementById('viewCoverBtn').disabled = !hasCover;
-        document.getElementById('downloadBtn').disabled = !hasResume && !hasCover;
-        document.getElementById('regenerateBtn').disabled = !hasResume && !hasCover;
+        document.getElementById('downloadBtn').disabled = !hasAnyContent;
+        document.getElementById('regenerateBtn').disabled = !hasAnyContent;
+        
+        console.log('Button states updated. Has any content:', hasAnyContent);
     });
 }
 
 function downloadContent() {
-    chrome.storage.local.get(['tailoredResume', 'coverLetter', 'lastJobDescription'], (result) => {
+    chrome.storage.local.get(['resumeContent', 'coverLetterContent', 'resumePDF', 'coverLetterPDF', 'lastJobDescription'], (result) => {
         let content = '';
         
-        if (result.tailoredResume) {
-            content += 'TAILORED RESUME\n';
-            content += '='.repeat(50) + '\n\n';
-            content += result.tailoredResume + '\n\n';
+        // Get resume content
+        let resumeContent = result.resumeContent;
+        if (!resumeContent && result.resumePDF) {
+            resumeContent = extractContentFromPDF(result.resumePDF);
         }
         
-        if (result.coverLetter) {
+        // Get cover letter content
+        let coverLetterContent = result.coverLetterContent;
+        if (!coverLetterContent && result.coverLetterPDF) {
+            coverLetterContent = extractContentFromPDF(result.coverLetterPDF);
+        }
+        
+        if (resumeContent) {
+            content += 'TAILORED RESUME\n';
+            content += '='.repeat(50) + '\n\n';
+            content += resumeContent + '\n\n';
+        }
+        
+        if (coverLetterContent) {
             content += 'COVER LETTER\n';
             content += '='.repeat(50) + '\n\n';
-            content += result.coverLetter + '\n\n';
+            content += coverLetterContent + '\n\n';
         }
         
         if (result.lastJobDescription) {
@@ -747,14 +1321,227 @@ function downloadContent() {
             content += result.lastJobDescription;
         }
         
-        // Create and download file
-        const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tailored-resume-${new Date().toISOString().split('T')[0]}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
+        if (content.trim()) {
+            // Create and download file
+            const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tailored-resume-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } else {
+            alert('No content available to download. Please generate content first.');
+        }
     });
+}
+
+function downloadPDF(type) {
+    console.log('downloadPDF called with type:', type);
+    
+    chrome.storage.local.get(['resumePDF', 'coverLetterPDF', 'resumeFileName', 'coverLetterFileName'], (result) => {
+        let pdfData, fileName;
+        
+        if (type === 'resume') {
+            pdfData = result.resumePDF;
+            fileName = result.resumeFileName || 'resume.html';
+        } else {
+            pdfData = result.coverLetterPDF;
+            fileName = result.coverLetterFileName || 'cover-letter.html';
+        }
+        
+        console.log('Download data:', {
+            type,
+            hasPDFData: !!pdfData,
+            fileName,
+            pdfDataLength: pdfData ? pdfData.length : 0
+        });
+        
+        if (pdfData) {
+            // Create blob directly from HTML content (not base64 encoded)
+            const blob = new Blob([pdfData], { type: 'text/html; charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('Download initiated for:', fileName);
+        } else {
+            console.error('PDF data not found for type:', type);
+            alert('PDF data not found. Please generate the documents again.');
+        }
+    });
+}
+
+// Helper function to proceed with navigation content despite warning
+function proceedWithNavigationContent() {
+    console.log('Proceed button clicked - starting generation...');
+    
+    // Clear the warning and proceed with generation
+    const outputElement = document.getElementById('output');
+    outputElement.innerHTML = '<p>Proceeding with generation...</p>';
+    
+    // Call the generation function directly
+    try {
+        handleGenerateInternal();
+    } catch (error) {
+        console.error('Error in proceedWithNavigationContent:', error);
+        outputElement.innerHTML = `<p>Error: ${error.message}</p>`;
+    }
+}
+
+// Helper function to clear output
+function clearOutput() {
+    const outputElement = document.getElementById('output');
+    outputElement.innerHTML = '';
+}
+
+// Internal generation function (without navigation checks)
+async function handleGenerateInternal() {
+    console.log('handleGenerateInternal called');
+    
+    const jobDescription = document.getElementById('jobDesc').value;
+    const selectedResumeId = document.getElementById('resumeSelect').value;
+    const outputElement = document.getElementById('output');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    console.log('Job description length:', jobDescription ? jobDescription.length : 0);
+    console.log('Selected resume ID:', selectedResumeId);
+    
+    if (!jobDescription.trim()) {
+        console.log('No job description found in handleGenerateInternal');
+        outputElement.innerText = 'Please enter a job description first.\n\n💡 Tip: Click "Extract Job" to automatically extract job descriptions from job posting pages (LinkedIn, Indeed, Glassdoor, etc.)';
+        return;
+    }
+    
+    console.log('Job description found in handleGenerateInternal, getting resume data...');
+    
+    // Get the selected resume content
+    const result = await chrome.storage.local.get(['userResumes']);
+    const resumes = result.userResumes || [];
+    const selectedResume = resumes.find(r => r.id === selectedResumeId);
+    
+    console.log('Resumes found in handleGenerateInternal:', resumes.length);
+    console.log('Selected resume in handleGenerateInternal:', selectedResume);
+    
+    if (!selectedResume || (!selectedResume.content && !selectedResume.experience)) {
+        console.log('No valid resume found in handleGenerateInternal');
+        outputElement.innerText = 'Please save a resume first using the "Manage Resumes" button.';
+        return;
+    }
+    
+    console.log('Resume validation passed in handleGenerateInternal, proceeding with API call...');
+    
+    // Log the plaintext content being sent to OpenAI
+    console.log('=== PLAINTEXT CONTENT FOR OPENAI ===');
+    console.log('📄 Job Description:', jobDescription);
+    console.log('📋 Current Resume Content:', selectedResume.content);
+    console.log('📋 Full Experience Details:', selectedResume.experience);
+    console.log('📂 Resume Name:', selectedResume.name);
+    console.log('🆔 Resume ID:', selectedResumeId);
+    console.log('👤 User ID:', 'demo-user');
+    
+    // Create the complete package being sent to OpenAI API
+    const openAIPackage = {
+        jobDescription,
+        resumeId: selectedResumeId,
+        userId: 'demo-user',
+        currentResume: selectedResume.content,
+        fullExperience: selectedResume.experience,
+        resumeName: selectedResume.name
+    };
+    
+    console.log('=== COMPLETE PACKAGE SENT TO OPENAI API ===');
+    console.log('📦 API Package:', JSON.stringify(openAIPackage, null, 2));
+    console.log('📊 Package Size:', JSON.stringify(openAIPackage).length, 'characters');
+    console.log('📊 Job Description Length:', jobDescription.length, 'characters');
+    console.log('📊 Resume Content Length:', selectedResume.content ? selectedResume.content.length : 0, 'characters');
+    console.log('📊 Experience Details Length:', selectedResume.experience ? selectedResume.experience.length : 0, 'characters');
+    console.log('=== END OF OPENAI PACKAGE ===');
+    
+    // Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerText = 'Generating...';
+    outputElement.innerText = 'Analyzing job description and generating tailored recommendations...';
+    
+    try {
+        // Call Supabase Edge Function instead of OpenAI directly
+        const SUPABASE_URL = 'https://sdlmyaffbnjkmzwpdwqp.supabase.co'; // TODO: Replace with your Supabase URL
+        
+        // Get authentication header if user is logged in
+        let authHeader = null;
+        if (auth && isAuthenticated) {
+            authHeader = await auth.getAuthHeader();
+        }
+        
+        // Prepare headers
+        const headers = { 
+            'Content-Type': 'application/json; charset=utf-8'
+        };
+        
+        // Add auth header if available
+        if (authHeader) {
+            headers['Authorization'] = authHeader;
+        }
+        
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(openAIPackage)
+        });
+
+        const data = await response.json();
+        
+        console.log('=== OPENAI API RESPONSE ===');
+        console.log('📡 Response Status:', response.status, response.statusText);
+        console.log('📡 Response Data:', data);
+        console.log('📡 Response Success:', data.success);
+        console.log('📡 Has Resume PDF:', !!data.resumePDF);
+        console.log('📡 Has Cover Letter PDF:', !!data.coverLetterPDF);
+        console.log('=== END OF API RESPONSE ===');
+        console.log('📡 Full Response Data:', JSON.stringify(data, null, 2));
+        
+        if (!response.ok) {
+            throw new Error(data.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Check if we have a successful response with PDF content
+        if (data.success && data.resumePDF && data.coverLetterPDF) {
+            // Save PDF data to storage
+            await saveGeneratedPDFs(data, jobDescription, selectedResumeId);
+            
+            // Display download options
+            updateOutputDisplay('pdfs', data);
+            
+            // Update button states
+            updateButtonStates();
+        } else if (data.success && (data.resumeContent || data.coverLetterContent)) {
+            // Handle text content response
+            const tailoredResume = data.resumeContent || '';
+            const coverLetter = data.coverLetterContent || '';
+            
+            // Save to persistent storage
+            await saveGeneratedContent(tailoredResume, coverLetter, jobDescription, selectedResumeId);
+            
+            // Display the content
+            updateOutputDisplay('resume', tailoredResume);
+            
+            // Update button states
+            updateButtonStates();
+        } else {
+            outputElement.innerText = 'No recommendations generated. Please try again.\n\nThis might be because:\n• The job description is too short or unclear\n• The API response format was unexpected\n• There was an issue with the content generation\n\nTry using a more detailed job description or check the console for more details.';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        outputElement.innerText = `Error: ${error.message}. Please check your API configuration and try again.`;
+    } finally {
+        // Reset button state
+        generateBtn.disabled = false;
+        generateBtn.innerText = 'Generate Recommendations';
+    }
 }
   

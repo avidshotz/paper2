@@ -1,5 +1,5 @@
 // api/tailor.js
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Set security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
@@ -24,10 +24,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Job description is required' });
     }
 
-    // OpenAI API configuration
+    // Get OpenAI API key from environment variables
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
-      return res.status(500).json({ error: 'OpenAI API key not configured' });
+      console.error('❌ OPENAI_API_KEY not found in environment variables');
+      return res.status(500).json({ 
+        error: 'OpenAI API key not configured',
+        message: 'Please add OPENAI_API_KEY to your .env file'
+      });
     }
 
     // Prepare the prompt for OpenAI with enhanced context
@@ -112,4 +116,7 @@ Resume ID: ${resumeId || 'demo-resume-id'}`;
       message: error.message 
     });
   }
-} 
+}
+
+// Export for CommonJS
+module.exports = handler; 

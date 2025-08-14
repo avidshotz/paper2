@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobTaylor</title>
+  <title>Rezlie</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -101,6 +101,70 @@
 
     #loadResumeBtn:hover {
       background: #6d28d9;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 20px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0;
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .user-info-btn {
+      background: rgba(79, 70, 229, 0.1);
+      border: 1px solid rgba(79, 70, 229, 0.2);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #4f46e5;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      transition: all 0.2s ease;
+      min-width: 140px;
+      max-width: 160px;
+      flex-shrink: 0;
+    }
+
+    .user-info-btn:hover {
+      background: rgba(79, 70, 229, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .user-info-btn .user-email {
+      font-weight: 600;
+      font-size: 11px;
+      opacity: 0.9;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .user-info-btn .user-credits {
+      font-size: 10px;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    .user-info-btn .user-subscription {
+      font-size: 10px;
+      opacity: 0.7;
+      font-style: italic;
+      text-align: right;
     }
 
     .resume-manager {
@@ -416,12 +480,188 @@
       width: auto;
       margin-right: 5px;
     }
+
+    /* PDF success styles */
+    .pdf-success {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+
+    .pdf-success h3 {
+      margin: 0 0 10px 0;
+      color: #065f46;
+    }
+
+    .pdf-success p {
+      margin: 0 0 15px 0;
+      color: #047857;
+    }
+
+    .pdf-downloads {
+      margin-bottom: 15px;
+    }
+
+    .pdf-downloads button {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .pdf-preview h4 {
+      margin: 15px 0 8px 0;
+      color: #374151;
+      font-size: 0.9rem;
+    }
+
+    .pdf-preview .preview-content {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 0.8rem;
+      color: #6b7280;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    /* Authentication styles */
+    .auth-section {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .auth-status {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .auth-status.logged-in {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .auth-status.logged-out {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .auth-button {
+      background: #3b82f6 !important;
+      margin-bottom: 8px;
+    }
+
+    .auth-button:hover {
+      background: #2563eb !important;
+    }
+
+    .rate-limit-info {
+      font-size: 0.8rem;
+      color: #64748b;
+      text-align: center;
+    }
+
+    /* Auth modal styles */
+    .auth-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .auth-modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 280px;
+      position: relative;
+    }
+
+    .auth-modal-content h3 {
+      margin: 0 0 10px 0;
+      color: #1e293b;
+    }
+
+    .auth-modal-content p {
+      margin: 0 0 15px 0;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    .auth-modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .auth-modal-content button {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .auth-modal-content button[type="button"] {
+      background: #6b7280 !important;
+    }
+
+    .auth-modal-content button[type="button"]:hover {
+      background: #4b5563 !important;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none !important;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #6b7280;
+      width: auto;
+      margin: 0;
+      padding: 0;
+    }
+
+    .close-modal:hover {
+      color: #374151;
+    }
   </style>
 </head>
 <body>
-  <div class="logo">
-    <img src="icon48.png" alt="JobTaylor Logo" />
-    <h2>JobTaylor</h2>
+      <div class="header">
+      <div class="logo">
+        <img src="icon48.png" alt="Rezlie Logo" />
+        <h2>Rezlie</h2>
+      </div>
+      <button id="userInfoBtn" class="user-info-btn" style="display: none;">
+        <span class="user-credits">Credits: --</span>
+        <span class="user-email">Loading...</span>
+        <span class="user-subscription">Free</span>
+      </button>
+    </div>
+
+  <!-- Authentication Section -->
+  <div class="auth-section">
+    <div id="authStatus" class="auth-status logged-out">Not logged in</div>
+    <button id="authButton" class="auth-button">Sign In</button>
+    <div id="rateLimitInfo" class="rate-limit-info">Sign in to start generating resumes</div>
   </div>
 
   <label for="resumeSelect">📂 Select Resume:</label>
@@ -437,6 +677,7 @@
 
   <button id="manageResumesBtn" title="Manage and edit your resume templates" aria-label="Manage resumes">📝 Manage Resumes</button>
   <button id="loadResumeBtn" title="Load a resume file from your computer" aria-label="Load resume file">📂 Load Resume</button>
+  <button id="extractJobBtn" title="Extract job description from current page" aria-label="Extract job description">🔍 Extract Job Description</button>
   <button id="generateBtn" title="Generate AI-tailored resume and cover letter" aria-label="Generate tailored content">🪄 Tailor with AI</button>
   <button id="viewResumeBtn" title="View the generated tailored resume" aria-label="View tailored resume">🧾 View Tailored Resume</button>
   <button id="viewCoverBtn" title="View the generated cover letter" aria-label="View cover letter">✉️ View Cover Letter</button>
@@ -445,6 +686,7 @@
 
   <pre id="output" role="status" aria-live="polite"></pre>
 
+  <script src="auth.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

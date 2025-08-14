@@ -1,13 +1,15 @@
 {
-  "name": "job-taylor-extension",
+  "name": "rezlie-extension",
   "version": "1.0.0",
   "description": "Chrome extension that uses OpenAI API to generate tailored resume and cover letter recommendations",
-  "main": "api/tailor.js",
+  "main": "server.js",
   "scripts": {
     "test": "node test-api.js",
-    "start": "vercel dev",
-    "deploy": "vercel --prod",
-    "build": "echo 'No build step required for serverless functions'"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "node build-extension.js",
+    "watch": "node watch-extension.js",
+    "setup": "cp env.example .env && echo '✅ .env file created! Please edit it with your Supabase credentials.'"
   },
   "keywords": [
     "chrome-extension",
@@ -18,8 +20,10 @@
   ],
   "author": "Your Name",
   "license": "MIT",
-  "devDependencies": {
-    "vercel": "^32.7.2"
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
   },
   "engines": {
     "node": ">=18.0.0"

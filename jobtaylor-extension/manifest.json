@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "JobTaylor",
-  "version": "1.0",
-  "description": "Instant resume tailoring from job descriptions.",
+  "name": "Rezlie",
+  "version": "1.0.0",
+  "description": "Instant resume tailoring from job descriptions using AI.",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -19,7 +19,30 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.supabase.co/*",
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://*.monster.com/*",
+    "https://*.careerbuilder.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.linkedin.com/*",
+        "https://*.indeed.com/*",
+        "https://*.glassdoor.com/*",
+        "https://*.monster.com/*",
+        "https://*.careerbuilder.com/*",
+        "https://*.ziprecruiter.com/*",
+        "https://*.simplyhired.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; frame-ancestors 'none';"
