@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find PDF Breaking Point</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 { color: #059669; text-align: center; }
+        .test-group {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .test-group h3 { margin-top: 0; color: #374151; }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 13px;
+        }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        button.success { background: #059669; }
+        button.error { background: #dc2626; }
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .info { background: #dbeafe; color: #1e40af; }
+        .results {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Find PDF Breaking Point</h1>
+        <p style="text-align: center; color: #6b7280;">
+            Since minimal HTML works, let's find exactly what breaks your PDF service
+        </p>
+
+        <div class="test-group">
+            <h3>✅ Known Working (Baseline)</h3>
+            <button onclick="testBaseline()">Test Minimal HTML (Known Good)</button>
+        </div>
+
+        <div class="test-group">
+            <h3>🧪 Progressive HTML Tests</h3>
+            <button onclick="testWithDoctype()">+ Add DOCTYPE</button>
+            <button onclick="testWithHead()">+ Add HEAD section</button>
+            <button onclick="testWithMeta()">+ Add META charset</button>
+            <button onclick="testWithTitle()">+ Add TITLE</button>
+        </div>
+
+        <div class="test-group">
+            <h3>🎨 CSS Styling Tests</h3>
+            <button onclick="testWithBasicCSS()">+ Basic CSS</button>
+            <button onclick="testWithFontFamily()">+ Font Family</button>
+            <button onclick="testWithColors()">+ Colors</button>
+            <button onclick="testWithBorders()">+ Borders</button>
+            <button onclick="testWithBackgrounds()">+ Backgrounds</button>
+        </div>
+
+        <div class="test-group">
+            <h3>📄 Content Element Tests</h3>
+            <button onclick="testWithLists()">+ Lists (ul/li)</button>
+            <button onclick="testWithDivs()">+ Div containers</button>
+            <button onclick="testWithClasses()">+ CSS classes</button>
+            <button onclick="testWithComplexLayout()">+ Complex layout</button>
+        </div>
+
+        <div class="test-group">
+            <h3>🚀 Full Resume Template</h3>
+            <button onclick="testResumeTemplate()">Test Full Resume</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+        let testResults = [];
+
+        function addResult(testName, success, details = '') {
+            testResults.push({ testName, success, details, timestamp: new Date().toLocaleTimeString() });
+            updateResults();
+        }
+
+        function updateResults() {
+            const resultsEl = document.getElementById('results');
+            let html = '<div class="results"><h4>📊 Test Results:</h4>';
+            
+            testResults.forEach(result => {
+                const icon = result.success ? '✅' : '❌';
+                const status = result.success ? 'SUCCESS' : 'FAILED';
+                html += `[${result.timestamp}] ${icon} ${result.testName}: ${status}`;
+                if (result.details) html += ` - ${result.details}`;
+                html += '\n';
+            });
+            
+            html += '</div>';
+            resultsEl.innerHTML = html;
+        }
+
+        async function testHTML(testName, htmlContent) {
+            try {
+                console.log(`Testing: ${testName}`);
+                console.log(`HTML length: ${htmlContent.length}`);
+                
+                const response = await fetch(SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: htmlContent })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const sizeKB = (blob.size / 1024).toFixed(1);
+                    addResult(testName, true, `PDF: ${sizeKB}KB`);
+                    
+                    // Update button color to green
+                    if (typeof event !== 'undefined' && event.target) {
+                        event.target.className = 'success';
+                    }
+                    
+                    return true;
+                } else {
+                    addResult(testName, false, `HTTP ${response.status}`);
+                    if (typeof event !== 'undefined' && event.target) {
+                        event.target.className = 'error';
+                    }
+                    return false;
+                }
+            } catch (error) {
+                addResult(testName, false, error.message);
+                if (typeof event !== 'undefined' && event.target) {
+                    event.target.className = 'error';
+                }
+                return false;
+            }
+        }
+
+        // Test functions
+        async function testBaseline() {
+            const html = '<html><body><h1>Test</h1><p>Simple test</p></body></html>';
+            await testHTML('Baseline Minimal', html);
+        }
+
+        async function testWithDoctype() {
+            const html = '<!DOCTYPE html><html><body><h1>Test</h1><p>With DOCTYPE</p></body></html>';
+            await testHTML('With DOCTYPE', html);
+        }
+
+        async function testWithHead() {
+            const html = `<!DOCTYPE html>
+<html>
+<head></head>
+<body><h1>Test</h1><p>With HEAD section</p></body>
+</html>`;
+            await testHTML('With HEAD', html);
+        }
+
+        async function testWithMeta() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body><h1>Test</h1><p>With META charset</p></body>
+</html>`;
+            await testHTML('With META charset', html);
+        }
+
+        async function testWithTitle() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+</head>
+<body><h1>Test</h1><p>With TITLE</p></body>
+</html>`;
+            await testHTML('With TITLE', html);
+        }
+
+        async function testWithBasicCSS() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; }
+        h1 { font-size: 24px; }
+    </style>
+</head>
+<body><h1>Test</h1><p>With basic CSS</p></body>
+</html>`;
+            await testHTML('With Basic CSS', html);
+        }
+
+        async function testWithFontFamily() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        h1 { font-size: 24px; }
+    </style>
+</head>
+<body><h1>Test</h1><p>With font family</p></body>
+</html>`;
+            await testHTML('With Font Family', html);
+        }
+
+        async function testWithColors() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        h1 { font-size: 24px; color: #2c3e50; }
+        p { color: #34495e; }
+    </style>
+</head>
+<body><h1>Test</h1><p>With colors</p></body>
+</html>`;
+            await testHTML('With Colors', html);
+        }
+
+        async function testWithBorders() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        h1 { font-size: 24px; color: #2c3e50; border-bottom: 2px solid #3498db; }
+        p { color: #34495e; }
+    </style>
+</head>
+<body><h1>Test</h1><p>With borders</p></body>
+</html>`;
+            await testHTML('With Borders', html);
+        }
+
+        async function testWithBackgrounds() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        h1 { font-size: 24px; color: #2c3e50; border-bottom: 2px solid #3498db; }
+        p { color: #34495e; }
+        .highlight { background: #f8f9fa; padding: 10px; }
+    </style>
+</head>
+<body><h1>Test</h1><p>With backgrounds</p><div class="highlight">Highlighted section</div></body>
+</html>`;
+            await testHTML('With Backgrounds', html);
+        }
+
+        async function testWithLists() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        h1 { color: #2c3e50; }
+        ul { margin: 10px 0; padding-left: 20px; }
+        li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Test</h1>
+    <p>With lists:</p>
+    <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+    </ul>
+</body>
+</html>`;
+            await testHTML('With Lists', html);
+        }
+
+        async function testWithDivs() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        h1 { color: #2c3e50; }
+        .section { margin: 15px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Test</h1>
+    <div class="section">
+        <h2>Section 1</h2>
+        <p>Content in a div</p>
+    </div>
+</body>
+</html>`;
+            await testHTML('With Divs', html);
+        }
+
+        async function testWithClasses() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .section { margin: 10px 0; }
+        .contact-info { background: #f8f9fa; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Test Document</h1>
+    </div>
+    <div class="contact-info">
+        <p>Contact information</p>
+    </div>
+</body>
+</html>`;
+            await testHTML('With CSS Classes', html);
+        }
+
+        async function testWithComplexLayout() {
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Document</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.3; font-size: 12px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        h2 { color: #34495e; margin-top: 15px; margin-bottom: 8px; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .section { margin: 10px 0; }
+        .contact-info { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Complex Layout Test</h1>
+    </div>
+    <div class="contact-info">
+        <p><strong>Contact Info</strong><br>Email: test@example.com</p>
+    </div>
+    <div class="section">
+        <h2>Section</h2>
+        <p>Complex content with multiple elements</p>
+    </div>
+</body>
+</html>`;
+            await testHTML('Complex Layout', html);
+        }
+
+        async function testResumeTemplate() {
+            // This is the full resume template from your code
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.3; 
+            font-size: 12px;
+        }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 2px solid #3498db; 
+            padding-bottom: 5px; 
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        h2 { 
+            color: #34495e; 
+            margin-top: 15px; 
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        h3 { 
+            color: #34495e; 
+            margin-top: 12px; 
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        p { 
+            margin: 5px 0; 
+            line-height: 1.2;
+        }
+        ul { 
+            margin: 5px 0; 
+            padding-left: 20px;
+        }
+        li { 
+            margin: 2px 0; 
+            line-height: 1.2;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 15px; 
+        }
+        .section { 
+            margin: 10px 0; 
+        }
+        .contact-info { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Professional Resume</h1>
+    </div>
+    <div class="content">
+        Sample resume content here
+    </div>
+</body>
+</html>`;
+            await testHTML('Full Resume Template', html);
+        }
+
+        // Initialize
+        console.log('Progressive PDF test tool loaded');
+    </script>
+</body>
+</html>

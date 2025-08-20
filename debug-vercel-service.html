@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Vercel PDF Service</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 { color: #dc2626; text-align: center; }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .log-section {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        .error { background: #fee2e2; color: #991b1b; }
+        .success { background: #d1fae5; color: #065f46; }
+        .info { background: #dbeafe; color: #1e40af; }
+        .test-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-item h3 { margin-top: 0; color: #374151; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Vercel PDF Service</h1>
+        <p style="text-align: center; color: #6b7280;">
+            Let's diagnose what's causing the 500 error with your PDF service
+        </p>
+
+        <div class="test-item">
+            <h3>📡 Service Connectivity Tests</h3>
+            <button onclick="testServiceAlive()">Test Service Status</button>
+            <button onclick="testWithMinimalHTML()">Test Minimal HTML</button>
+            <button onclick="testWithComplexHTML()">Test Complex HTML</button>
+            <button onclick="testWithBadData()">Test Bad Request</button>
+        </div>
+
+        <div class="test-item">
+            <h3>🔍 Service Information</h3>
+            <p><strong>Service URL:</strong> <span id="serviceUrl">https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success</span></p>
+            <button onclick="checkServiceLogs()">Check Service Health</button>
+            <button onclick="testDifferentEndpoint()">Test Different Endpoint</button>
+        </div>
+
+        <div id="results"></div>
+        <div id="logs" class="log-section" style="display: none;"></div>
+    </div>
+
+    <script>
+        const SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+        let logData = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logData.push(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+            updateLogs();
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+
+        function updateLogs() {
+            const logsEl = document.getElementById('logs');
+            logsEl.innerHTML = '<h4>🔍 Debug Logs:</h4><pre>' + logData.join('\n') + '</pre>';
+            logsEl.style.display = 'block';
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+
+        function showResult(message, type) {
+            document.getElementById('results').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function testServiceAlive() {
+            log('Testing service connectivity...');
+            showResult('🔄 Testing service connectivity...', 'info');
+            
+            try {
+                // Test with a simple GET request first
+                const response = await fetch(SERVICE_URL, {
+                    method: 'GET'
+                });
+                
+                log(`GET request status: ${response.status} ${response.statusText}`);
+                
+                if (response.status === 405) {
+                    showResult('✅ Service is alive! (405 Method Not Allowed is expected for GET)', 'success');
+                    log('Service is responding correctly - 405 means it only accepts POST');
+                } else {
+                    log(`Unexpected status for GET: ${response.status}`);
+                    showResult(`⚠️ Service responded with status ${response.status}`, 'info');
+                }
+            } catch (error) {
+                log(`Service connectivity error: ${error.message}`, 'error');
+                showResult(`❌ Service unreachable: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWithMinimalHTML() {
+            log('Testing with minimal HTML...');
+            showResult('🔄 Testing minimal HTML conversion...', 'info');
+            
+            const minimalHTML = '<html><body><h1>Test</h1><p>Simple test</p></body></html>';
+            
+            try {
+                log(`Sending minimal HTML (${minimalHTML.length} chars)`);
+                
+                const response = await fetch(SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ html: minimalHTML })
+                });
+
+                log(`Response status: ${response.status} ${response.statusText}`);
+                log(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    log(`Success! PDF size: ${blob.size} bytes`);
+                    showResult(`✅ Minimal HTML works! PDF generated (${(blob.size/1024).toFixed(1)} KB)`, 'success');
+                    
+                    // Download the test PDF
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'minimal-test.pdf';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } else {
+                    const errorText = await response.text();
+                    log(`Error response body: ${errorText}`, 'error');
+                    showResult(`❌ Minimal HTML failed: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`Minimal HTML test error: ${error.message}`, 'error');
+                showResult(`❌ Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWithComplexHTML() {
+            log('Testing with complex HTML...');
+            showResult('🔄 Testing complex HTML conversion...', 'info');
+            
+            const complexHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; }
+        .section { margin: 15px 0; padding: 10px; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>Complex Test Document</h1>
+    <div class="section">
+        <h2>Section 1</h2>
+        <p>This tests complex styling and layout.</p>
+        <ul>
+            <li>Item 1</li>
+            <li>Item 2</li>
+            <li>Item 3</li>
+        </ul>
+    </div>
+    <div class="section">
+        <h2>Section 2</h2>
+        <p>Testing more content with <strong>bold</strong> and <em>italic</em> text.</p>
+    </div>
+</body>
+</html>`;
+            
+            try {
+                log(`Sending complex HTML (${complexHTML.length} chars)`);
+                
+                const response = await fetch(SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ html: complexHTML })
+                });
+
+                log(`Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    log(`Success! PDF size: ${blob.size} bytes`);
+                    showResult(`✅ Complex HTML works! PDF generated (${(blob.size/1024).toFixed(1)} KB)`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`Error response body: ${errorText}`, 'error');
+                    showResult(`❌ Complex HTML failed: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`Complex HTML test error: ${error.message}`, 'error');
+                showResult(`❌ Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWithBadData() {
+            log('Testing with invalid data...');
+            showResult('🔄 Testing error handling...', 'info');
+            
+            try {
+                // Test with invalid JSON
+                const response1 = await fetch(SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: 'invalid json'
+                });
+                
+                log(`Bad JSON test - Status: ${response1.status}`);
+                
+                // Test with missing html field
+                const response2 = await fetch(SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ notHtml: 'test' })
+                });
+                
+                log(`Missing html field test - Status: ${response2.status}`);
+                
+                showResult('🔍 Error handling tests completed - check logs', 'info');
+                
+            } catch (error) {
+                log(`Bad data test error: ${error.message}`, 'error');
+                showResult(`❌ Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkServiceLogs() {
+            log('Checking service health...');
+            showResult('🔄 Checking service health...', 'info');
+            
+            try {
+                // Try to get some basic info about the service
+                const response = await fetch(SERVICE_URL.replace('/api/success', ''), {
+                    method: 'GET'
+                });
+                
+                log(`Root path status: ${response.status}`);
+                
+                // Also try the specific endpoint with OPTIONS
+                const optionsResponse = await fetch(SERVICE_URL, {
+                    method: 'OPTIONS'
+                });
+                
+                log(`OPTIONS request status: ${optionsResponse.status}`);
+                log(`OPTIONS headers: ${JSON.stringify([...optionsResponse.headers.entries()])}`);
+                
+                showResult('🔍 Service health check completed - check logs', 'info');
+                
+            } catch (error) {
+                log(`Health check error: ${error.message}`, 'error');
+                showResult(`❌ Health check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDifferentEndpoint() {
+            log('Testing different endpoint...');
+            showResult('🔄 Testing alternative endpoint...', 'info');
+            
+            // Try the endpoint without /success
+            const altUrl = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/generate-pdf';
+            
+            try {
+                log(`Trying alternative URL: ${altUrl}`);
+                
+                const response = await fetch(altUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ html: '<html><body><h1>Test</h1></body></html>' })
+                });
+
+                log(`Alternative endpoint status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    showResult(`✅ Alternative endpoint works! Try using: ${altUrl}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`Alternative endpoint error: ${errorText}`, 'error');
+                    showResult(`❌ Alternative endpoint also failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Alternative endpoint test error: ${error.message}`, 'error');
+                showResult(`❌ Alternative endpoint unreachable: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        log('Debug tool initialized');
+        showResult('🚀 Ready to debug your Vercel PDF service', 'info');
+    </script>
+</body>
+</html>

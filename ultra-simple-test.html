@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ultra Simple PDF Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        button { background: #007acc; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005c99; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Ultra Simple PDF Test</h1>
+    <p>Test exactly what works with your PDF service</p>
+    
+    <button onclick="testMinimal()">Test: Minimal HTML (Known Working)</button>
+    <button onclick="testBasic()">Test: Basic HTML</button>
+    <button onclick="testWithMeta()">Test: HTML + Meta</button>
+    <button onclick="testWithStyle()">Test: HTML + CSS</button>
+    
+    <div id="status"></div>
+
+    <script>
+        const PDF_SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+
+        function showStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function testPDF(name, html) {
+            showStatus(`🔄 Testing: ${name}...`, 'info');
+            console.log(`Testing: ${name}`);
+            console.log(`HTML: ${html}`);
+            
+            try {
+                const response = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: html })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const sizeKB = (blob.size / 1024).toFixed(1);
+                    showStatus(`✅ ${name}: SUCCESS! PDF generated (${sizeKB} KB)`, 'success');
+                    
+                    // Auto-download the PDF
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `test-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    showStatus(`❌ ${name}: FAILED! HTTP ${response.status} - ${errorText.substring(0, 100)}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                showStatus(`❌ ${name}: ERROR! ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Test 1: This is known to work from your debug results
+        async function testMinimal() {
+            const html = '<html><body><h1>Test</h1></body></html>';
+            await testPDF('Minimal HTML', html);
+        }
+
+        // Test 2: Add basic structure
+        async function testBasic() {
+            const html = '<html><head><title>Test</title></head><body><h1>Test</h1><p>Basic HTML</p></body></html>';
+            await testPDF('Basic HTML', html);
+        }
+
+        // Test 3: Add meta tag
+        async function testWithMeta() {
+            const html = '<html><head><meta charset="UTF-8"><title>Test</title></head><body><h1>Test</h1><p>With Meta</p></body></html>';
+            await testPDF('HTML + Meta', html);
+        }
+
+        // Test 4: Add simple CSS
+        async function testWithStyle() {
+            const html = `<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test</h1>
+    <p>With CSS</p>
+</body>
+</html>`;
+            await testPDF('HTML + CSS', html);
+        }
+    </script>
+</body>
+</html>

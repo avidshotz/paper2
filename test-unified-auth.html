@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Unified Auth Implementation</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .auth-section { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; }
+        .test-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #007cba; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005a87; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 15px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+        .warning { color: #856404; }
+        input { width: 200px; padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .auth-status { padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
+        .auth-status.authenticated { background: #d4edda; color: #155724; }
+        .auth-status.unauthenticated { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test Unified Auth Implementation</h1>
+        
+        <div class="auth-section">
+            <h4>🎯 Testing Strategy:</h4>
+            <p>1. Use the unified SupabaseAuth class for all authentication</p>
+            <p>2. Test authentication state management</p>
+            <p>3. Test Supabase function calls with proper auth headers</p>
+            <p>4. Verify the service works with and without authentication</p>
+        </div>
+
+        <div class="auth-status" id="authStatus">🔄 Initializing authentication...</div>
+
+        <div class="test-section">
+            <h3>1. Authentication Management</h3>
+            <div>
+                <input type="email" id="email" placeholder="Email" value="test@example.com">
+                <input type="password" id="password" placeholder="Password" value="testpassword123">
+            </div>
+            <button onclick="signIn()" id="signInBtn">Sign In</button>
+            <button onclick="signUp()" id="signUpBtn">Sign Up</button>
+            <button onclick="signOut()" id="signOutBtn">Sign Out</button>
+            <button onclick="checkAuthStatus()" id="statusBtn">Check Status</button>
+            <div class="results" id="authResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test Supabase Function Call</h3>
+            <p>Test calling the Supabase Edge Function with proper authentication:</p>
+            <button onclick="testSupabaseFunction()" id="testFunctionBtn">Test Function Call</button>
+            <div class="results" id="functionResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Test Complete Flow</h3>
+            <p>Test the complete job description → HTML → PDF flow:</p>
+            <button onclick="testCompleteFlow()" id="completeFlowBtn">Test Complete Flow</button>
+            <div class="results" id="completeResults"></div>
+        </div>
+    </div>
+
+    <!-- Load the unified auth class -->
+    <script src="supabase-auth.js"></script>
+    
+    <script>
+        const SUPABASE_URL = 'https://sdlmyaffbnjkmzwpdwqp.supabase.co';
+        const PDF_SERVICE_URL = 'https://pdf-service2-5xlwxkuud-avidshotzs-projects.vercel.app/api/success';
+        
+        // Initialize global auth instance
+        let auth = null;
+
+        // Initialize auth on page load
+        window.addEventListener('load', async () => {
+            try {
+                auth = new SupabaseAuth();
+                await new Promise(resolve => setTimeout(resolve, 500)); // Wait for init
+                updateAuthStatus();
+            } catch (error) {
+                log('authResults', `❌ Auth initialization failed: ${error.message}`, 'error');
+            }
+        });
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toISOString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearResults(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function updateAuthStatus() {
+            const statusEl = document.getElementById('authStatus');
+            if (auth && auth.isAuthenticated) {
+                statusEl.className = 'auth-status authenticated';
+                statusEl.textContent = `✅ Authenticated as: ${auth.user?.email || 'Unknown'}`;
+            } else {
+                statusEl.className = 'auth-status unauthenticated';
+                statusEl.textContent = '❌ Not authenticated';
+            }
+        }
+
+        async function signIn() {
+            clearResults('authResults');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                log('authResults', '❌ Please enter email and password', 'error');
+                return;
+            }
+
+            try {
+                log('authResults', '🔄 Signing in...', 'info');
+                const result = await auth.signIn(email, password);
+                log('authResults', '✅ Sign in successful!', 'success');
+                log('authResults', `User: ${result.user?.email}`, 'info');
+                updateAuthStatus();
+            } catch (error) {
+                log('authResults', `❌ Sign in failed: ${error.message}`, 'error');
+                updateAuthStatus();
+            }
+        }
+
+        async function signUp() {
+            clearResults('authResults');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                log('authResults', '❌ Please enter email and password', 'error');
+                return;
+            }
+
+            try {
+                log('authResults', '🔄 Signing up...', 'info');
+                const result = await auth.signUp(email, password);
+                log('authResults', '✅ Sign up successful!', 'success');
+                if (result.user?.email_confirmed_at) {
+                    log('authResults', 'Email confirmed, signed in automatically', 'success');
+                } else {
+                    log('authResults', 'Please check your email to verify your account', 'warning');
+                }
+                updateAuthStatus();
+            } catch (error) {
+                log('authResults', `❌ Sign up failed: ${error.message}`, 'error');
+                updateAuthStatus();
+            }
+        }
+
+        async function signOut() {
+            clearResults('authResults');
+            try {
+                log('authResults', '🔄 Signing out...', 'info');
+                await auth.signOut();
+                log('authResults', '✅ Signed out successfully!', 'success');
+                updateAuthStatus();
+            } catch (error) {
+                log('authResults', `❌ Sign out failed: ${error.message}`, 'error');
+                updateAuthStatus();
+            }
+        }
+
+        async function checkAuthStatus() {
+            clearResults('authResults');
+            log('authResults', '🔍 Checking authentication status...', 'info');
+            log('authResults', `Authenticated: ${auth.isAuthenticated}`, 'info');
+            log('authResults', `User: ${auth.user?.email || 'None'}`, 'info');
+            log('authResults', `Access Token: ${auth.getAccessToken() ? 'Present' : 'None'}`, 'info');
+            log('authResults', `Auth Header: ${auth.getAuthHeader() ? 'Present' : 'None'}`, 'info');
+        }
+
+        async function testSupabaseFunction() {
+            clearResults('functionResults');
+            const button = document.getElementById('testFunctionBtn');
+            button.disabled = true;
+            
+            try {
+                log('functionResults', '🚀 Testing Supabase Edge Function...', 'info');
+                log('functionResults', `Auth Status: ${auth.isAuthenticated ? 'Authenticated' : 'Unauthenticated'}`, 'info');
+                
+                const payload = {
+                    jobDescription: 'We are looking for a Senior Software Engineer with 5+ years experience in JavaScript, React, Node.js, and cloud technologies.',
+                    resumeId: 'test-resume-id',
+                    userId: 'demo-user',
+                    currentResume: 'John Smith\nSenior Software Engineer\n5+ years experience in JavaScript, React, Node.js\nEducation: BS Computer Science',
+                    fullExperience: 'Detailed experience with React, Node.js, Express, PostgreSQL, AWS EC2/S3, Docker, microservices, agile development.',
+                    resumeName: 'Professional Resume'
+                };
+                
+                const headers = auth.getAuthHeaders();
+                log('functionResults', `Headers: ${JSON.stringify(headers, null, 2)}`, 'info');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                log('functionResults', `📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('functionResults', '✅ Function call successful!', 'success');
+                    log('functionResults', `Success: ${data.success}`, 'info');
+                    log('functionResults', `Has Resume HTML: ${!!data.resumeHTML}`, 'info');
+                    log('functionResults', `Has Cover Letter HTML: ${!!data.coverLetterHTML}`, 'info');
+                    
+                    // Debug: Log the actual response structure
+                    log('functionResults', '🔍 Full response structure:', 'info');
+                    const responseKeys = Object.keys(data);
+                    log('functionResults', `Response keys: ${responseKeys.join(', ')}`, 'info');
+                    
+                    if (data.resumeContent) {
+                        log('functionResults', `Has Resume Content: ${!!data.resumeContent} (${data.resumeContent?.length} chars)`, 'info');
+                    }
+                    if (data.coverLetterContent) {
+                        log('functionResults', `Has Cover Letter Content: ${!!data.coverLetterContent} (${data.coverLetterContent?.length} chars)`, 'info');
+                    }
+                    if (data.error) {
+                        log('functionResults', `Error in response: ${data.error}`, 'error');
+                    }
+                    if (data.rateLimit) {
+                        log('functionResults', `Rate limit info: ${JSON.stringify(data.rateLimit)}`, 'info');
+                    }
+                    
+                    // Store for complete flow test
+                    window.testData = data;
+                } else {
+                    const errorText = await response.text();
+                    log('functionResults', `❌ Error: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log('functionResults', `❌ Network error: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function testCompleteFlow() {
+            clearResults('completeResults');
+            const button = document.getElementById('completeFlowBtn');
+            button.disabled = true;
+            
+            try {
+                log('completeResults', '🔄 Testing complete flow...', 'info');
+                
+                if (!window.testData || !window.testData.resumeHTML) {
+                    log('completeResults', '⚠️ No test data. Running function test first...', 'warning');
+                    
+                    // Run function test first
+                    const payload = {
+                        jobDescription: 'Test job description for complete flow.',
+                        resumeId: 'test-resume-id',
+                        userId: 'demo-user',
+                        currentResume: 'Test resume',
+                        fullExperience: 'Test experience',
+                        resumeName: 'Test Resume'
+                    };
+                    
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
+                        method: 'POST',
+                        headers: auth.getAuthHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        log('completeResults', `❌ Function call failed: ${errorText}`, 'error');
+                        return;
+                    }
+                    
+                    window.testData = await response.json();
+                }
+                
+                // Test PDF generation
+                log('completeResults', '📄 Testing PDF generation...', 'info');
+                
+                const htmlContent = window.testData.resumeHTML;
+                const htmlSize = new Blob([htmlContent]).size;
+                log('completeResults', `HTML size: ${(htmlSize / 1024).toFixed(1)}KB`, 'info');
+                
+                const pdfResponse = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ html: htmlContent })
+                });
+                
+                log('completeResults', `PDF service response: ${pdfResponse.status} ${pdfResponse.statusText}`, pdfResponse.ok ? 'success' : 'error');
+                
+                if (pdfResponse.ok) {
+                    const pdfBlob = await pdfResponse.blob();
+                    log('completeResults', `🎉 COMPLETE FLOW SUCCESS! PDF: ${(pdfBlob.size / 1024).toFixed(1)}KB`, 'success');
+                    
+                    // Download the PDF
+                    const url = URL.createObjectURL(pdfBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test-resume-complete-flow.pdf';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    log('completeResults', '📥 PDF downloaded successfully!', 'success');
+                } else {
+                    const errorText = await pdfResponse.text();
+                    log('completeResults', `❌ PDF generation failed: ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                log('completeResults', `❌ Complete flow error: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

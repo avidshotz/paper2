@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{TITLE}}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.3; 
+            font-size: 12px;
+            color: #333;
+        }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 2px solid #3498db; 
+            padding-bottom: 5px; 
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        h2 { 
+            color: #34495e; 
+            margin-top: 15px; 
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        h3 { 
+            color: #34495e; 
+            margin-top: 12px; 
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        p { 
+            margin: 5px 0; 
+            line-height: 1.2;
+        }
+        ul { 
+            margin: 5px 0; 
+            padding-left: 20px;
+        }
+        li { 
+            margin: 2px 0; 
+            line-height: 1.2;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 15px; 
+        }
+        .section { 
+            margin: 10px 0; 
+        }
+        .contact-info { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .contact-info p {
+            margin: 3px 0;
+        }
+        .job-title {
+            color: #3498db;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .company {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .date-range {
+            color: #7f8c8d;
+            font-style: italic;
+            float: right;
+        }
+        .experience-item {
+            margin-bottom: 15px;
+            clear: both;
+        }
+        .experience-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .skill-category {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .skill-category strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 3px;
+        }
+        .education-item {
+            margin-bottom: 10px;
+        }
+        .degree {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .school {
+            color: #34495e;
+        }
+        .gpa {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{NAME}}</h1>
+        <div class="job-title">{{JOB_TITLE}}</div>
+    </div>
+    
+    <div class="contact-info">
+        <p><strong>Email:</strong> {{EMAIL}} | <strong>Phone:</strong> {{PHONE}}</p>
+        <p><strong>Location:</strong> {{LOCATION}} | <strong>LinkedIn:</strong> {{LINKEDIN}}</p>
+        {{#WEBSITE}}<p><strong>Website:</strong> {{WEBSITE}}</p>{{/WEBSITE}}
+    </div>
+
+    <div class="content">
+        {{#SUMMARY}}
+        <h2>Professional Summary</h2>
+        <p>{{SUMMARY}}</p>
+        {{/SUMMARY}}
+
+        {{#EXPERIENCE}}
+        <h2>Experience</h2>
+        {{#EXPERIENCE_ITEMS}}
+        <div class="experience-item">
+            <div class="experience-header">
+                <div>
+                    <h3>{{POSITION}} | <span class="company">{{COMPANY}}</span></h3>
+                </div>
+                <div class="date-range">{{DATE_RANGE}}</div>
+            </div>
+            {{#RESPONSIBILITIES}}
+            <ul>
+                {{#RESPONSIBILITY_LIST}}
+                <li>{{.}}</li>
+                {{/RESPONSIBILITY_LIST}}
+            </ul>
+            {{/RESPONSIBILITIES}}
+            {{#ACHIEVEMENTS}}
+            <p><strong>Key Achievements:</strong></p>
+            <ul>
+                {{#ACHIEVEMENT_LIST}}
+                <li>{{.}}</li>
+                {{/ACHIEVEMENT_LIST}}
+            </ul>
+            {{/ACHIEVEMENTS}}
+        </div>
+        {{/EXPERIENCE_ITEMS}}
+        {{/EXPERIENCE}}
+
+        {{#SKILLS}}
+        <h2>Technical Skills</h2>
+        <div class="skills-grid">
+            {{#SKILL_CATEGORIES}}
+            <div class="skill-category">
+                <strong>{{CATEGORY_NAME}}:</strong>
+                {{SKILLS_LIST}}
+            </div>
+            {{/SKILL_CATEGORIES}}
+        </div>
+        {{/SKILLS}}
+
+        {{#EDUCATION}}
+        <h2>Education</h2>
+        {{#EDUCATION_ITEMS}}
+        <div class="education-item">
+            <div class="degree">{{DEGREE}}</div>
+            <div class="school">{{SCHOOL}} | {{GRADUATION_YEAR}}</div>
+            {{#GPA}}<div class="gpa">GPA: {{GPA}}</div>{{/GPA}}
+            {{#RELEVANT_COURSEWORK}}
+            <p><strong>Relevant Coursework:</strong> {{RELEVANT_COURSEWORK}}</p>
+            {{/RELEVANT_COURSEWORK}}
+        </div>
+        {{/EDUCATION_ITEMS}}
+        {{/EDUCATION}}
+
+        {{#PROJECTS}}
+        <h2>Notable Projects</h2>
+        {{#PROJECT_ITEMS}}
+        <div class="section">
+            <h3>{{PROJECT_NAME}}</h3>
+            <p>{{PROJECT_DESCRIPTION}}</p>
+            {{#TECHNOLOGIES}}<p><strong>Technologies:</strong> {{TECHNOLOGIES}}</p>{{/TECHNOLOGIES}}
+            {{#PROJECT_LINK}}<p><strong>Link:</strong> {{PROJECT_LINK}}</p>{{/PROJECT_LINK}}
+        </div>
+        {{/PROJECT_ITEMS}}
+        {{/PROJECTS}}
+
+        {{#CERTIFICATIONS}}
+        <h2>Certifications</h2>
+        <ul>
+            {{#CERTIFICATION_LIST}}
+            <li>{{CERTIFICATION_NAME}} - {{ISSUING_ORGANIZATION}} ({{DATE}})</li>
+            {{/CERTIFICATION_LIST}}
+        </ul>
+        {{/CERTIFICATIONS}}
+
+        {{#ADDITIONAL_SECTIONS}}
+        {{#LANGUAGES}}
+        <h2>Languages</h2>
+        <p>{{LANGUAGE_LIST}}</p>
+        {{/LANGUAGES}}
+
+        {{#VOLUNTEER}}
+        <h2>Volunteer Experience</h2>
+        {{#VOLUNTEER_ITEMS}}
+        <div class="section">
+            <h3>{{VOLUNTEER_ROLE}} | {{VOLUNTEER_ORG}}</h3>
+            <p class="date-range">{{VOLUNTEER_DATES}}</p>
+            <p>{{VOLUNTEER_DESCRIPTION}}</p>
+        </div>
+        {{/VOLUNTEER_ITEMS}}
+        {{/VOLUNTEER}}
+        {{/ADDITIONAL_SECTIONS}}
+    </div>
+</body>
+</html>

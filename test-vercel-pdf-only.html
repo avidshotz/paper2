@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel PDF Service Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2563eb;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        textarea {
+            height: 300px;
+            resize: vertical;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #4b5563;
+        }
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+        .btn-success:hover:not(:disabled) {
+            background: #047857;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .status.loading {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .config-section {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #e5e7eb;
+        }
+        .config-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+        }
+        .sample-data {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border-left: 4px solid #2563eb;
+        }
+        .preview-section {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .preview-section h4 {
+            margin-top: 0;
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Vercel PDF Service Test</h1>
+        <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+            Test your Vercel PDF service directly with placeholder HTML content
+        </p>
+
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <div class="config-title">⚙️ PDF Service Configuration</div>
+            <div class="form-group">
+                <label for="pdfServiceUrl">PDF Service URL:</label>
+                <input type="text" id="pdfServiceUrl" value="https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+        </div>
+
+        <!-- Test Data Section -->
+        <div class="form-group">
+            <label for="testTemplate">HTML Template:</label>
+            <select id="testTemplate" onchange="loadTemplate()">
+                <option value="resume">Resume Template</option>
+                <option value="cover-letter">Cover Letter Template</option>
+                <option value="simple">Simple Document</option>
+                <option value="custom">Custom HTML</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="htmlContent">HTML Content:</label>
+            <textarea id="htmlContent" placeholder="Enter HTML content to convert to PDF..."></textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <button class="btn-secondary" onclick="loadTemplate()">📝 Load Template</button>
+            <button class="btn-primary" onclick="testPDFGeneration()" id="testBtn">🚀 Generate PDF</button>
+            <button class="btn-success" onclick="downloadLastPDF()" id="downloadBtn" disabled>📥 Download PDF</button>
+        </div>
+
+        <!-- Status Display -->
+        <div id="status" style="display: none;"></div>
+
+        <!-- Preview Section -->
+        <div id="previewSection" style="display: none;"></div>
+    </div>
+
+    <script>
+        let lastPDFBlob = null;
+
+        // PDF Service Configuration
+        const templates = {
+            resume: `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.3; 
+            font-size: 12px;
+        }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 2px solid #3498db; 
+            padding-bottom: 5px; 
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        h2 { 
+            color: #34495e; 
+            margin-top: 15px; 
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        h3 { 
+            color: #34495e; 
+            margin-top: 12px; 
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        p { 
+            margin: 5px 0; 
+            line-height: 1.2;
+        }
+        ul { 
+            margin: 5px 0; 
+            padding-left: 20px;
+        }
+        li { 
+            margin: 2px 0; 
+            line-height: 1.2;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 15px; 
+        }
+        .section { 
+            margin: 10px 0; 
+        }
+        .contact-info { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Professional Resume</h1>
+    </div>
+    <div class="content">
+        <div class="contact-info">
+            <p><strong>John Smith</strong></p>
+            <p>Senior Software Engineer</p>
+            <p>Email: john.smith@email.com | Phone: (555) 123-4567</p>
+            <p>Location: San Francisco, CA | LinkedIn: linkedin.com/in/johnsmith</p>
+        </div>
+
+        <h2>Professional Summary</h2>
+        <p>Experienced software engineer with 6+ years developing scalable web applications. Proven track record in full-stack development using modern technologies including React, Node.js, and cloud platforms.</p>
+
+        <h2>Experience</h2>
+        <div class="section">
+            <h3>Software Engineer | InnovaTech Solutions | 2020 - Present</h3>
+            <ul>
+                <li>Developed responsive web applications serving 100K+ users</li>
+                <li>Built REST APIs using Node.js and Express framework</li>
+                <li>Implemented automated testing reducing deployment time by 40%</li>
+                <li>Collaborated with product teams to deliver features on schedule</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Junior Developer | StartupXYZ | 2018 - 2020</h3>
+            <ul>
+                <li>Created frontend components using React and Redux</li>
+                <li>Participated in agile development process</li>
+                <li>Assisted in database design and optimization</li>
+            </ul>
+        </div>
+
+        <h2>Skills</h2>
+        <ul>
+            <li><strong>Frontend:</strong> React, JavaScript, HTML5, CSS3, Redux</li>
+            <li><strong>Backend:</strong> Node.js, Express, Python, REST APIs</li>
+            <li><strong>Databases:</strong> PostgreSQL, MongoDB</li>
+            <li><strong>Cloud:</strong> AWS (EC2, S3), Docker</li>
+            <li><strong>Tools:</strong> Git, Jest, Webpack</li>
+        </ul>
+
+        <h2>Education</h2>
+        <p><strong>Bachelor of Science in Computer Science</strong><br>
+        University of California, Berkeley | 2018</p>
+    </div>
+</body>
+</html>`,
+
+            'cover-letter': `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cover Letter</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.4; 
+            font-size: 12px;
+        }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 2px solid #3498db; 
+            padding-bottom: 5px; 
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 20px; 
+        }
+        .contact-info { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 15px;
+        }
+        p { 
+            margin: 10px 0; 
+            line-height: 1.4;
+        }
+        .signature {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cover Letter</h1>
+    </div>
+    <div class="content">
+        <div class="contact-info">
+            <p><strong>John Smith</strong><br>
+            Email: john.smith@email.com<br>
+            Phone: (555) 123-4567<br>
+            San Francisco, CA</p>
+        </div>
+
+        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+
+        <p><strong>To:</strong> Hiring Manager<br>
+        <strong>Company:</strong> TechCorp Inc.</p>
+
+        <p>Dear Hiring Manager,</p>
+
+        <p>I am writing to express my strong interest in the Senior Software Engineer position at TechCorp Inc. With over 6 years of experience in full-stack development and a proven track record of delivering scalable web applications, I am excited about the opportunity to contribute to your dynamic team.</p>
+
+        <p>In my current role at InnovaTech Solutions, I have successfully:</p>
+        <ul>
+            <li>Led development of customer-facing applications serving over 100,000 users</li>
+            <li>Implemented microservices architecture using Node.js and Express</li>
+            <li>Reduced deployment time by 40% through automated testing and CI/CD pipelines</li>
+            <li>Mentored junior developers and conducted code reviews</li>
+        </ul>
+
+        <p>My expertise in React, Node.js, and AWS cloud technologies aligns perfectly with your requirements. I am particularly drawn to TechCorp's innovative approach to solving complex technical challenges and would welcome the opportunity to contribute to your continued success.</p>
+
+        <p>I would appreciate the opportunity to discuss how my technical skills and experience can benefit your team. Thank you for your time and consideration.</p>
+
+        <div class="signature">
+            <p>Sincerely,<br>
+            <strong>John Smith</strong></p>
+        </div>
+    </div>
+</body>
+</html>`,
+
+            simple: `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Document</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 40px; 
+            line-height: 1.6; 
+        }
+        h1 { 
+            color: #333; 
+            text-align: center;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 { 
+            color: #555; 
+            margin-top: 30px;
+        }
+        p { 
+            margin: 15px 0; 
+        }
+        .highlight {
+            background: #ffffcc;
+            padding: 15px;
+            border-left: 4px solid #007acc;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📄 Simple Test Document</h1>
+    
+    <h2>Purpose</h2>
+    <p>This is a simple HTML document designed to test PDF generation functionality. It includes basic formatting, styles, and content to verify that the conversion process works correctly.</p>
+    
+    <h2>Features Tested</h2>
+    <ul>
+        <li>Basic text formatting</li>
+        <li>Headings and hierarchy</li>
+        <li>Lists and bullet points</li>
+        <li>CSS styling</li>
+        <li>Color and layout</li>
+    </ul>
+    
+    <div class="highlight">
+        <p><strong>Highlighted Section:</strong> This section tests background colors and border styling in PDF generation.</p>
+    </div>
+    
+    <h2>Test Information</h2>
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+    <p><strong>Service:</strong> Vercel PDF Generation</p>
+    <p><strong>Status:</strong> Testing in progress...</p>
+</body>
+</html>`
+        };
+
+        // Load template based on selection
+        function loadTemplate() {
+            const selectedTemplate = document.getElementById('testTemplate').value;
+            const htmlContent = document.getElementById('htmlContent');
+            
+            if (selectedTemplate === 'custom') {
+                htmlContent.value = '';
+                htmlContent.placeholder = 'Enter your custom HTML content here...';
+            } else if (templates[selectedTemplate]) {
+                htmlContent.value = templates[selectedTemplate];
+            }
+            
+            showPreview();
+        }
+
+        // Show HTML preview
+        function showPreview() {
+            const htmlContent = document.getElementById('htmlContent').value;
+            const previewSection = document.getElementById('previewSection');
+            
+            if (htmlContent.trim()) {
+                previewSection.innerHTML = `
+                    <h4>📋 HTML Preview (first 500 characters):</h4>
+                    <pre>${htmlContent.substring(0, 500)}${htmlContent.length > 500 ? '...' : ''}</pre>
+                `;
+                previewSection.style.display = 'block';
+            } else {
+                previewSection.style.display = 'none';
+            }
+        }
+
+        // Test PDF generation
+        async function testPDFGeneration() {
+            const statusEl = document.getElementById('status');
+            const testBtn = document.getElementById('testBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            // Get form data
+            const pdfServiceUrl = document.getElementById('pdfServiceUrl').value.trim();
+            const htmlContent = document.getElementById('htmlContent').value.trim();
+
+            // Validation
+            if (!pdfServiceUrl || !htmlContent) {
+                showStatus('Please provide PDF service URL and HTML content', 'error');
+                return;
+            }
+
+            // Show loading state
+            testBtn.disabled = true;
+            testBtn.textContent = '🔄 Generating PDF...';
+            downloadBtn.disabled = true;
+            showStatus('Calling Vercel PDF service...', 'loading');
+
+            try {
+                console.log('🚀 Sending request to:', pdfServiceUrl);
+                console.log('📄 HTML content length:', htmlContent.length);
+
+                const response = await fetch(pdfServiceUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ html: htmlContent })
+                });
+
+                console.log('📡 Response status:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    throw new Error(`PDF generation failed: ${response.status} ${response.statusText}`);
+                }
+
+                // Get the PDF blob
+                lastPDFBlob = await response.blob();
+                console.log('✅ PDF generated successfully, size:', lastPDFBlob.size, 'bytes');
+
+                showStatus(`🎉 Success! PDF generated (${(lastPDFBlob.size / 1024).toFixed(1)} KB)`, 'success');
+                downloadBtn.disabled = false;
+
+            } catch (error) {
+                console.error('❌ Test error:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                lastPDFBlob = null;
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '🚀 Generate PDF';
+            }
+        }
+
+        // Download last generated PDF
+        function downloadLastPDF() {
+            if (!lastPDFBlob) {
+                alert('No PDF to download. Generate one first.');
+                return;
+            }
+
+            try {
+                const url = URL.createObjectURL(lastPDFBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `test-document-${new Date().toISOString().split('T')[0]}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showStatus('📥 PDF downloaded successfully!', 'success');
+                console.log('📥 PDF download initiated');
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus(`❌ Download failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        // Initialize with default template
+        window.onload = function() {
+            loadTemplate();
+        };
+
+        // Update preview when typing
+        document.getElementById('htmlContent').addEventListener('input', showPreview);
+    </script>
+</body>
+</html>

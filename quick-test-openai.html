@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quick OpenAI Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 15px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+        button { background: #007cba; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Quick Test: Check Supabase Function Logs</h1>
+    <p>Test the Supabase function with minimal payload to see what's happening with OpenAI</p>
+    
+    <button onclick="testMinimal()" id="testBtn">Test Minimal Payload</button>
+    
+    <div class="results" id="results"></div>
+
+    <script src="supabase-auth.js"></script>
+    <script>
+        const SUPABASE_URL = 'https://sdlmyaffbnjkmzwpdwqp.supabase.co';
+        let auth = null;
+
+        window.addEventListener('load', async () => {
+            auth = new SupabaseAuth();
+            await new Promise(resolve => setTimeout(resolve, 500));
+        });
+
+        function log(message, type = 'info') {
+            const element = document.getElementById('results');
+            const timestamp = new Date().toISOString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        async function testMinimal() {
+            document.getElementById('results').innerHTML = '';
+            const button = document.getElementById('testBtn');
+            button.disabled = true;
+            
+            try {
+                log('🚀 Testing minimal payload to check OpenAI response...', 'info');
+                
+                const payload = {
+                    jobDescription: 'Simple test: We need a developer.',
+                    resumeId: 'test',
+                    userId: 'test',
+                    currentResume: 'John Doe\nDeveloper',
+                    fullExperience: 'Programming experience',
+                    resumeName: 'Test'
+                };
+                
+                const headers = auth.getAuthHeaders();
+                log(`Auth headers being sent: ${JSON.stringify(headers, null, 2)}`, 'info');
+                log(`Auth status: ${auth.isAuthenticated}`, 'info');
+                log(`Access token present: ${!!auth.getAccessToken()}`, 'info');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Function responded successfully!', 'success');
+                    log(`Response keys: ${Object.keys(data).join(', ')}`, 'info');
+                    log(`Success: ${data.success}`, 'info');
+                    log(`Resume HTML length: ${data.resumeHTML?.length || 0}`, 'info');
+                    log(`Cover Letter HTML length: ${data.coverLetterHTML?.length || 0}`, 'info');
+                    log(`Resume Content length: ${data.resumeContent?.length || 0}`, 'info');
+                    log(`Cover Letter Content length: ${data.coverLetterContent?.length || 0}`, 'info');
+                    
+                    if (data.resumeContent) {
+                        log(`Resume content preview: ${data.resumeContent.substring(0, 200)}...`, 'info');
+                    }
+                    if (data.coverLetterContent) {
+                        log(`Cover letter content preview: ${data.coverLetterContent.substring(0, 200)}...`, 'info');
+                    }
+                    
+                    log('🔍 Check Supabase Function logs for OpenAI response details!', 'warning');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Error: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

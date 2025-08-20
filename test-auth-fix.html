@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Auth Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 15px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+        button { background: #007cba; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005a87; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test Authentication Fix</h1>
+    <p>Test if the Supabase function now accepts requests without authorization headers.</p>
+    
+    <button onclick="testWithoutAuth()" id="testBtn">Test Without Auth</button>
+    <button onclick="testWithFakeAuth()">Test With Fake Auth</button>
+    
+    <div class="results" id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://sdlmyaffbnjkmzwpdwqp.supabase.co';
+
+        function log(message, type = 'info') {
+            const element = document.getElementById('results');
+            const timestamp = new Date().toISOString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testWithoutAuth() {
+            clearResults();
+            const button = document.getElementById('testBtn');
+            button.disabled = true;
+            
+            log('🚀 Testing Supabase function WITHOUT authorization header...', 'info');
+            
+            const payload = {
+                jobDescription: 'We are looking for a Senior Software Engineer with 5+ years experience.',
+                resumeId: 'test-resume-id',
+                userId: 'demo-user',
+                currentResume: 'John Smith\nSenior Software Engineer',
+                fullExperience: 'Detailed experience with modern technologies.',
+                resumeName: 'Test Resume'
+            };
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json; charset=utf-8'
+                        // NO Authorization header
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ SUCCESS! Function accepts requests without auth!', 'success');
+                    log(`📊 Response data:`, 'info');
+                    log(`   - Success: ${data.success}`, 'info');
+                    log(`   - Has Resume HTML: ${!!data.resumeHTML}`, 'info');
+                    log(`   - Has Cover Letter HTML: ${!!data.coverLetterHTML}`, 'info');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Error: ${errorText}`, 'error');
+                    
+                    if (errorText.includes('authorization') || errorText.includes('401')) {
+                        log('🔧 Auth fix not working - still requires authorization', 'error');
+                    }
+                }
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function testWithFakeAuth() {
+            log('\n🧪 Testing with fake authorization header...', 'info');
+            
+            const payload = {
+                jobDescription: 'Test job description.',
+                resumeId: 'test-resume-id',
+                userId: 'demo-user',
+                currentResume: 'Test resume',
+                fullExperience: 'Test experience',
+                resumeName: 'Test Resume'
+            };
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/tailor-resume`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json; charset=utf-8',
+                        'Authorization': 'Bearer fake-token-for-testing'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📡 Fake auth response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    log('✅ Function handles fake auth gracefully!', 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`Response: ${errorText.substring(0, 200)}`, 'info');
+                }
+            } catch (error) {
+                log(`❌ Fake auth error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

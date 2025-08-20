@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test External PDF Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+        .warning-text { color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test External PDF Service</h1>
+        
+        <div class="warning">
+            <h4>⚠️ Important Discovery:</h4>
+            <p>The extension is calling an <strong>EXTERNAL Vercel service</strong> at:</p>
+            <p><code>https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success</code></p>
+            <p>This is NOT your Supabase Edge Function! This is someone else's deployed service.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>1. Test What the External Service Expects</h3>
+            <p>Let's see what this external service actually expects and if it has method restrictions:</p>
+            <button onclick="testServiceMethods()" id="methodBtn">Test HTTP Methods</button>
+            <div class="results" id="methodResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test Payload Size Limits</h3>
+            <p>Test different payload sizes to find where the "URI malformed" error occurs:</p>
+            <button onclick="testSmallPayload()" id="smallBtn">Test Small (1KB)</button>
+            <button onclick="testMediumPayload()" id="mediumBtn">Test Medium (50KB)</button>
+            <button onclick="testLargePayload()" id="largeBtn">Test Large (500KB)</button>
+            <div class="results" id="sizeResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Test Different Data Formats</h3>
+            <p>Test what data format the service expects:</p>
+            <button onclick="testJobDescriptionFormat()" id="formatBtn">Test Job Description Format</button>
+            <button onclick="testHtmlFormat()" id="htmlBtn">Test HTML Format</button>
+            <div class="results" id="formatResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Progressive Size Test</h3>
+            <p>Find the exact breaking point:</p>
+            <button onclick="progressiveTest()" id="progressiveBtn">Start Progressive Test</button>
+            <button onclick="stopProgressiveTest()" id="stopBtn" disabled>Stop Test</button>
+            <div class="results" id="progressiveResults"></div>
+        </div>
+    </div>
+
+    <script>
+        const PDF_SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+        
+        let progressiveTestRunning = false;
+        let progressiveTestAborted = false;
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toISOString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning-text' : 'info';
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearResults(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function generateContent(sizeKB) {
+            const targetSize = sizeKB * 1024;
+            const baseContent = `This is a test job description for debugging purposes. We are looking for a senior software engineer with experience in JavaScript, Python, React, Node.js, cloud technologies, AWS, Docker, Kubernetes, microservices, databases, APIs, and more. The ideal candidate will have 5+ years of experience in software development, strong problem-solving skills, excellent communication abilities, and experience working in agile teams. `;
+            
+            let content = baseContent;
+            while (content.length < targetSize) {
+                content += baseContent;
+            }
+            
+            return content.substring(0, targetSize);
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function testServiceMethods() {
+            clearResults('methodResults');
+            const button = document.getElementById('methodBtn');
+            button.disabled = true;
+            
+            log('methodResults', '🔍 Testing different HTTP methods on external service', 'info');
+            
+            // Test GET
+            try {
+                log('methodResults', '📤 Testing GET request...', 'info');
+                const getResponse = await fetch(PDF_SERVICE_URL, {
+                    method: 'GET'
+                });
+                log('methodResults', `GET Response: ${getResponse.status} ${getResponse.statusText}`, getResponse.ok ? 'success' : 'error');
+                
+                if (!getResponse.ok) {
+                    const errorText = await getResponse.text();
+                    log('methodResults', `GET Error Body: ${errorText.substring(0, 200)}`, 'error');
+                }
+            } catch (error) {
+                log('methodResults', `GET Error: ${error.message}`, 'error');
+            }
+            
+            // Test OPTIONS
+            try {
+                log('methodResults', '📤 Testing OPTIONS request...', 'info');
+                const optionsResponse = await fetch(PDF_SERVICE_URL, {
+                    method: 'OPTIONS'
+                });
+                log('methodResults', `OPTIONS Response: ${optionsResponse.status} ${optionsResponse.statusText}`, optionsResponse.ok ? 'success' : 'error');
+                
+                // Log CORS headers
+                log('methodResults', '📋 CORS Headers:', 'info');
+                for (const [key, value] of optionsResponse.headers.entries()) {
+                    if (key.toLowerCase().includes('access-control')) {
+                        log('methodResults', `   ${key}: ${value}`, 'info');
+                    }
+                }
+            } catch (error) {
+                log('methodResults', `OPTIONS Error: ${error.message}`, 'error');
+            }
+            
+            // Test POST with minimal data
+            try {
+                log('methodResults', '📤 Testing POST request with minimal data...', 'info');
+                const postResponse = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ test: 'minimal' })
+                });
+                log('methodResults', `POST Response: ${postResponse.status} ${postResponse.statusText}`, postResponse.ok ? 'success' : 'error');
+                
+                if (!postResponse.ok) {
+                    const errorText = await postResponse.text();
+                    log('methodResults', `POST Error Body: ${errorText.substring(0, 200)}`, 'error');
+                }
+            } catch (error) {
+                log('methodResults', `POST Error: ${error.message}`, 'error');
+            }
+            
+            button.disabled = false;
+        }
+
+        async function makeTestRequest(payload, resultElementId, testName) {
+            const startTime = Date.now();
+            const payloadStr = JSON.stringify(payload);
+            const contentSize = new Blob([payloadStr]).size;
+            
+            log(resultElementId, `🚀 Starting ${testName}`, 'info');
+            log(resultElementId, `📦 Payload size: ${formatBytes(contentSize)}`, 'info');
+
+            try {
+                const response = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: payloadStr
+                });
+
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                log(resultElementId, `⏱️  Response time: ${duration}ms`, 'info');
+                log(resultElementId, `📊 Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    log(resultElementId, `✅ Success! Response size: ${formatBytes(blob.size)}`, 'success');
+                    return { success: true, status: response.status, size: contentSize, duration, responseSize: blob.size };
+                } else {
+                    const errorText = await response.text();
+                    log(resultElementId, `❌ Error response:`, 'error');
+                    log(resultElementId, errorText.substring(0, 500) + (errorText.length > 500 ? '...' : ''), 'error');
+                    return { success: false, status: response.status, size: contentSize, duration, error: errorText };
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                log(resultElementId, `❌ Network error after ${duration}ms:`, 'error');
+                log(resultElementId, `Error: ${error.message}`, 'error');
+                
+                return { success: false, error: error.message, size: contentSize, duration };
+            }
+        }
+
+        async function testSmallPayload() {
+            clearResults('sizeResults');
+            const button = document.getElementById('smallBtn');
+            button.disabled = true;
+            
+            const content = generateContent(1); // 1KB
+            const payload = {
+                jobDescription: content,
+                resumeId: 'test-resume-id',
+                userId: 'debug-user',
+                currentResume: 'Test resume content',
+                fullExperience: 'Test experience content',
+                resumeName: 'Debug Resume'
+            };
+            
+            await makeTestRequest(payload, 'sizeResults', 'Small Payload Test (1KB)');
+            button.disabled = false;
+        }
+
+        async function testMediumPayload() {
+            const button = document.getElementById('mediumBtn');
+            button.disabled = true;
+            
+            const content = generateContent(50); // 50KB
+            const payload = {
+                jobDescription: content,
+                resumeId: 'test-resume-id',
+                userId: 'debug-user',
+                currentResume: 'Test resume content',
+                fullExperience: 'Test experience content',
+                resumeName: 'Debug Resume'
+            };
+            
+            await makeTestRequest(payload, 'sizeResults', 'Medium Payload Test (50KB)');
+            button.disabled = false;
+        }
+
+        async function testLargePayload() {
+            const button = document.getElementById('largeBtn');
+            button.disabled = true;
+            
+            const content = generateContent(500); // 500KB
+            const payload = {
+                jobDescription: content,
+                resumeId: 'test-resume-id',
+                userId: 'debug-user',
+                currentResume: 'Test resume content',
+                fullExperience: 'Test experience content',
+                resumeName: 'Debug Resume'
+            };
+            
+            await makeTestRequest(payload, 'sizeResults', 'Large Payload Test (500KB)');
+            button.disabled = false;
+        }
+
+        async function testJobDescriptionFormat() {
+            clearResults('formatResults');
+            const button = document.getElementById('formatBtn');
+            button.disabled = true;
+            
+            log('formatResults', '🧪 Testing job description format (like your extension sends)', 'info');
+            
+            const payload = {
+                jobDescription: "We are looking for a Senior Software Engineer to join our team. Requirements: 5+ years experience with JavaScript, React, Node.js, AWS, Docker. Responsibilities: Build scalable web applications, mentor junior developers, participate in code reviews.",
+                resumeId: 'resume-1',
+                userId: 'demo-user',
+                currentResume: 'John Smith\nSenior Software Engineer\nExperience: 6 years in full-stack development\nSkills: JavaScript, React, Node.js, Python, AWS',
+                fullExperience: 'Detailed experience working with React, Node.js, Express, PostgreSQL, AWS EC2/S3, Docker containers, microservices architecture, agile development, code reviews, mentoring.',
+                resumeName: 'Professional Resume'
+            };
+            
+            await makeTestRequest(payload, 'formatResults', 'Job Description Format Test');
+            button.disabled = false;
+        }
+
+        async function testHtmlFormat() {
+            const button = document.getElementById('htmlBtn');
+            button.disabled = true;
+            
+            log('formatResults', '🧪 Testing HTML format (what the service might expect)', 'info');
+            
+            const payload = {
+                html: '<html><body><h1>Test Document</h1><p>This is a test document to see if the service expects HTML format instead.</p></body></html>'
+            };
+            
+            await makeTestRequest(payload, 'formatResults', 'HTML Format Test');
+            button.disabled = false;
+        }
+
+        async function progressiveTest() {
+            clearResults('progressiveResults');
+            const startBtn = document.getElementById('progressiveBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            progressiveTestRunning = true;
+            progressiveTestAborted = false;
+
+            log('progressiveResults', '🔄 Starting progressive size test to find exact breaking point...', 'info');
+            
+            // Test sizes: 1KB, 5KB, 10KB, 25KB, 50KB, 100KB, 200KB, 300KB, 400KB, 500KB, 1MB
+            const sizes = [1, 5, 10, 25, 50, 100, 200, 300, 400, 500, 1000];
+            let lastWorkingSize = 0;
+            
+            for (const size of sizes) {
+                if (!progressiveTestRunning || progressiveTestAborted) {
+                    log('progressiveResults', '⏹️ Progressive test stopped by user', 'warning');
+                    break;
+                }
+
+                log('progressiveResults', `\n📊 Testing ${size}KB payload...`, 'info');
+                const content = generateContent(size);
+                const payload = {
+                    jobDescription: content,
+                    resumeId: 'test-resume-id',
+                    userId: 'debug-user',
+                    currentResume: 'Test resume content',
+                    fullExperience: 'Test experience content',
+                    resumeName: 'Debug Resume'
+                };
+                
+                const result = await makeTestRequest(payload, 'progressiveResults', `Progressive Test ${size}KB`);
+                
+                if (result.success) {
+                    lastWorkingSize = size;
+                    log('progressiveResults', `✅ ${size}KB works fine`, 'success');
+                } else {
+                    log('progressiveResults', `🛑 BREAKING POINT FOUND: ${size}KB fails, last working size was ${lastWorkingSize}KB`, 'error');
+                    log('progressiveResults', `💡 RECOMMENDATION: Keep job descriptions under ${lastWorkingSize}KB for reliable operation`, 'warning');
+                    break;
+                }
+                
+                // Small delay between tests to be nice to the service
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            progressiveTestRunning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            if (lastWorkingSize > 0) {
+                log('progressiveResults', `\n🎯 SUMMARY: Service works up to ${lastWorkingSize}KB payload size`, 'success');
+            }
+        }
+
+        function stopProgressiveTest() {
+            progressiveTestAborted = true;
+            progressiveTestRunning = false;
+            document.getElementById('progressiveBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>

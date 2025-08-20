@@ -5,6 +5,68 @@ let auth = null;
 let isAuthenticated = false;
 let currentUser = null;
 
+// PDF Service Configuration
+const PDF_SERVICE_URL = 'https://pdf-service2-5xlwxkuud-avidshotzs-projects.vercel.app/api/success';
+
+// PDF generation function using Vercel service
+async function generatePDFFromHTML(htmlContent, filename = 'document.pdf') {
+    try {
+        console.log('🚀 Calling PDF service with HTML length:', htmlContent.length);
+        
+        // Check HTML size and warn if too large
+        const htmlBytes = new Blob([htmlContent]).size;
+        const htmlKB = (htmlBytes / 1024).toFixed(1);
+        console.log('📊 HTML content size:', htmlKB, 'KB');
+        
+        if (htmlBytes > 100 * 1024) { // 100KB limit
+            console.warn('⚠️ HTML content is quite large:', htmlKB, 'KB - this might cause issues');
+        }
+        
+        // Create the payload and check its size
+        const payload = { html: htmlContent };
+        const payloadStr = JSON.stringify(payload);
+        const payloadBytes = new Blob([payloadStr]).size;
+        const payloadKB = (payloadBytes / 1024).toFixed(1);
+        
+        console.log('📦 JSON payload size:', payloadKB, 'KB');
+        
+        if (payloadBytes > 200 * 1024) { // 200KB limit
+            throw new Error(`HTML content too large for PDF service (${payloadKB}KB). Try reducing the content size.`);
+        }
+        
+        const response = await fetch(PDF_SERVICE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payloadStr
+        });
+
+        console.log('📡 PDF service response:', response.status, response.statusText);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ PDF service error:', errorText);
+            throw new Error(`PDF generation failed: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const pdfBlob = await response.blob();
+        console.log('✅ PDF generated successfully, size:', (pdfBlob.size / 1024).toFixed(1), 'KB');
+        
+        // Convert to base64 for storage
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const base64 = reader.result.split(',')[1]; // Remove data:application/pdf;base64, prefix
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(pdfBlob);
+        });
+    } catch (error) {
+        console.error('💥 PDF generation error:', error);
+        throw error;
+    }
+}
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded');
@@ -1015,15 +1077,61 @@ async function handleGenerate() {
             throw new Error(data.error?.message || `HTTP ${response.status}: ${response.statusText}`);
         }
         
-        // Check if we have a successful response with PDF content
-        if (data.success && data.resumePDF && data.coverLetterPDF) {
-            // Save PDF data to storage
+        // Check if we have a successful response with HTML content
+        if (data.success && data.resumeHTML && data.coverLetterHTML) {
+            // Generate PDFs from HTML on client side
+            outputElement.innerText = 'Converting HTML to PDF...';
+            
+            try {
+                // Generate PDFs from the HTML
+                // Generate PDFs sequentially to avoid ETXTBSY resource conflicts
+                console.log('📄 Generating resume PDF first...');
+                const resumePDF = await generatePDFFromHTML(data.resumeHTML, data.resumeFileName);
+                
+                // Small delay to prevent resource conflicts on Vercel service
+                console.log('⏱️ Waiting 500ms before generating cover letter...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                console.log('📄 Generating cover letter PDF...');
+                const coverLetterPDF = await generatePDFFromHTML(data.coverLetterHTML, data.coverLetterFileName);
+                
+                // Create PDF data object
+                const pdfData = {
+                    ...data,
+                    resumePDF: resumePDF,
+                    coverLetterPDF: coverLetterPDF
+                };
+                
+                // Save PDF data to storage
+                await saveGeneratedPDFs(pdfData, jobDescription, selectedResumeId);
+                
+                // Display download options
+                updateOutputDisplay('pdfs', pdfData);
+                
+                // Update button states
+                updateButtonStates();
+                
+            } catch (pdfError) {
+                console.error('PDF generation failed, falling back to HTML:', pdfError);
+                
+                // Fallback: treat HTML as content
+                const fallbackData = {
+                    ...data,
+                    resumePDF: data.resumeHTML,
+                    coverLetterPDF: data.coverLetterHTML
+                };
+                
+                await saveGeneratedPDFs(fallbackData, jobDescription, selectedResumeId);
+                updateOutputDisplay('pdfs', fallbackData);
+                updateButtonStates();
+                
+                // Show warning
+                outputElement.innerHTML += '<br><br>⚠️ PDF generation failed, files saved as HTML';
+            }
+        } else if (data.success && data.resumePDF && data.coverLetterPDF) {
+            // Legacy: if somehow we still get PDF data directly
             await saveGeneratedPDFs(data, jobDescription, selectedResumeId);
-            
-            // Display download options
             updateOutputDisplay('pdfs', data);
-            
-            // Update button states
             updateButtonStates();
         } else if (data.success && (data.resumeContent || data.coverLetterContent)) {
             // Handle text content response
@@ -1344,10 +1452,15 @@ function downloadPDF(type) {
         
         if (type === 'resume') {
             pdfData = result.resumePDF;
-            fileName = result.resumeFileName || 'resume.html';
+            fileName = result.resumeFileName || 'resume.pdf';
         } else {
             pdfData = result.coverLetterPDF;
-            fileName = result.coverLetterFileName || 'cover-letter.html';
+            fileName = result.coverLetterFileName || 'cover-letter.pdf';
+        }
+        
+        // Fix filename extension to be .pdf
+        if (fileName.endsWith('.html')) {
+            fileName = fileName.replace('.html', '.pdf');
         }
         
         console.log('Download data:', {
@@ -1358,18 +1471,53 @@ function downloadPDF(type) {
         });
         
         if (pdfData) {
-            // Create blob directly from HTML content (not base64 encoded)
-            const blob = new Blob([pdfData], { type: 'text/html; charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            
-            // Create download link
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            console.log('Download initiated for:', fileName);
+            try {
+                // Check if this is base64 PDF data or HTML
+                if (pdfData.startsWith('<!DOCTYPE html') || pdfData.startsWith('<html')) {
+                    // This is HTML (fallback case), download as HTML
+                    const blob = new Blob([pdfData], { type: 'text/html; charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName.replace('.pdf', '.html');
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    console.log('Downloaded as HTML (fallback):', fileName);
+                } else {
+                    // This should be base64 PDF data
+                    const byteCharacters = atob(pdfData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    console.log('Downloaded as PDF:', fileName);
+                }
+            } catch (error) {
+                console.error('Error processing PDF data:', error);
+                // Fallback to treating as HTML
+                const blob = new Blob([pdfData], { type: 'text/html; charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName.replace('.pdf', '.html');
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                console.log('Downloaded as HTML (error fallback):', fileName);
+            }
         } else {
             console.error('PDF data not found for type:', type);
             alert('PDF data not found. Please generate the documents again.');
@@ -1509,15 +1657,61 @@ async function handleGenerateInternal() {
             throw new Error(data.error?.message || `HTTP ${response.status}: ${response.statusText}`);
         }
         
-        // Check if we have a successful response with PDF content
-        if (data.success && data.resumePDF && data.coverLetterPDF) {
-            // Save PDF data to storage
+        // Check if we have a successful response with HTML content
+        if (data.success && data.resumeHTML && data.coverLetterHTML) {
+            // Generate PDFs from HTML on client side
+            outputElement.innerText = 'Converting HTML to PDF...';
+            
+            try {
+                // Generate PDFs from the HTML
+                // Generate PDFs sequentially to avoid ETXTBSY resource conflicts
+                console.log('📄 Generating resume PDF first...');
+                const resumePDF = await generatePDFFromHTML(data.resumeHTML, data.resumeFileName);
+                
+                // Small delay to prevent resource conflicts on Vercel service
+                console.log('⏱️ Waiting 500ms before generating cover letter...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                console.log('📄 Generating cover letter PDF...');
+                const coverLetterPDF = await generatePDFFromHTML(data.coverLetterHTML, data.coverLetterFileName);
+                
+                // Create PDF data object
+                const pdfData = {
+                    ...data,
+                    resumePDF: resumePDF,
+                    coverLetterPDF: coverLetterPDF
+                };
+                
+                // Save PDF data to storage
+                await saveGeneratedPDFs(pdfData, jobDescription, selectedResumeId);
+                
+                // Display download options
+                updateOutputDisplay('pdfs', pdfData);
+                
+                // Update button states
+                updateButtonStates();
+                
+            } catch (pdfError) {
+                console.error('PDF generation failed, falling back to HTML:', pdfError);
+                
+                // Fallback: treat HTML as content
+                const fallbackData = {
+                    ...data,
+                    resumePDF: data.resumeHTML,
+                    coverLetterPDF: data.coverLetterHTML
+                };
+                
+                await saveGeneratedPDFs(fallbackData, jobDescription, selectedResumeId);
+                updateOutputDisplay('pdfs', fallbackData);
+                updateButtonStates();
+                
+                // Show warning
+                outputElement.innerHTML += '<br><br>⚠️ PDF generation failed, files saved as HTML';
+            }
+        } else if (data.success && data.resumePDF && data.coverLetterPDF) {
+            // Legacy: if somehow we still get PDF data directly
             await saveGeneratedPDFs(data, jobDescription, selectedResumeId);
-            
-            // Display download options
             updateOutputDisplay('pdfs', data);
-            
-            // Update button states
             updateButtonStates();
         } else if (data.success && (data.resumeContent || data.coverLetterContent)) {
             // Handle text content response

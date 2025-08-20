@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Template Editor & PDF Tester</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f0f2f5;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+        }
+        
+        .editor-panel {
+            background: white;
+            padding: 20px;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .preview-panel {
+            background: #f9fafb;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        
+        .panel-header h2 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 18px;
+        }
+        
+        .panel-header p {
+            margin: 5px 0 0 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        #templateEditor {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            resize: none;
+            line-height: 1.4;
+        }
+        
+        #templateEditor:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .preview-area {
+            flex: 1;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        
+        .status-bar {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .status-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        
+        .template-info {
+            background: #f3f4f6;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #4b5563;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .quick-actions button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .sample-data-section {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        
+        .sample-data-section h4 {
+            margin: 0 0 8px 0;
+            color: #374151;
+            font-size: 14px;
+        }
+        
+        .sample-data-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .sample-data-controls button {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Editor Panel -->
+    <div class="editor-panel">
+        <div class="panel-header">
+            <h2>📝 Template Editor</h2>
+            <p>Edit your resume template and see live preview + PDF generation</p>
+        </div>
+        
+        <div class="quick-actions">
+            <button class="btn-secondary" onclick="loadTemplate()">🔄 Reload Template</button>
+            <button class="btn-warning" onclick="saveTemplate()">💾 Save Template</button>
+            <button class="btn-primary" onclick="renderPreview()">👁️ Update Preview</button>
+        </div>
+        
+        <textarea id="templateEditor" placeholder="Loading template..."></textarea>
+        
+        <div class="editor-controls">
+            <button class="btn-success" onclick="testPDFGeneration()" id="pdfTestBtn">🚀 Test PDF Generation</button>
+            <button class="btn-primary" onclick="downloadPDF()" id="downloadBtn" disabled>📥 Download PDF</button>
+            <button class="btn-secondary" onclick="validateTemplate()">✅ Validate Template</button>
+        </div>
+        
+        <div class="sample-data-section">
+            <h4>🎯 Sample Data Templates</h4>
+            <div class="sample-data-controls">
+                <button class="btn-secondary" onclick="loadSampleData('software-engineer')">Software Engineer</button>
+                <button class="btn-secondary" onclick="loadSampleData('product-manager')">Product Manager</button>
+                <button class="btn-secondary" onclick="loadSampleData('designer')">Designer</button>
+                <button class="btn-secondary" onclick="loadSampleData('minimal')">Minimal</button>
+            </div>
+        </div>
+        
+        <div id="editorStatus"></div>
+        
+        <div class="template-info">
+            <strong>💡 Template Variables:</strong><br>
+            Use {{VARIABLE}} for simple substitution<br>
+            Use {{#SECTION}}...{{/SECTION}} for conditional sections<br>
+            Use {{#LIST}}{{.}}{{/LIST}} for arrays<br>
+            <strong>Auto-saves:</strong> Changes saved to localStorage
+        </div>
+    </div>
+    
+    <!-- Preview Panel -->
+    <div class="preview-panel">
+        <div class="panel-header">
+            <h2>👁️ Live Preview</h2>
+            <p>See how your template renders with sample data</p>
+        </div>
+        
+        <div class="quick-actions">
+            <button class="btn-primary" onclick="renderPreview()">🔄 Refresh Preview</button>
+            <button class="btn-secondary" onclick="showRawHTML()">📄 View Raw HTML</button>
+            <button class="btn-warning" onclick="togglePreviewMode()">🔍 Toggle View Mode</button>
+        </div>
+        
+        <div class="preview-area" id="previewArea">
+            <p style="color: #6b7280; text-align: center; margin-top: 100px;">
+                Click "Update Preview" to see your template rendered
+            </p>
+        </div>
+        
+        <div id="previewStatus"></div>
+    </div>
+
+    <script>
+        const PDF_SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+        let currentRenderedHTML = '';
+        let lastPDFBlob = null;
+        let isRawHTMLMode = false;
+
+        // Sample data sets
+        const sampleDataSets = {
+            'software-engineer': {
+                TITLE: 'Professional Resume',
+                NAME: 'John Smith',
+                JOB_TITLE: 'Senior Software Engineer',
+                EMAIL: 'john.smith@email.com',
+                PHONE: '(555) 123-4567',
+                LOCATION: 'San Francisco, CA',
+                LINKEDIN: 'linkedin.com/in/johnsmith',
+                WEBSITE: 'github.com/johnsmith',
+                SUMMARY: 'Experienced software engineer with 6+ years developing scalable web applications. Proven track record in full-stack development using modern technologies including React, Node.js, and cloud platforms.',
+                EXPERIENCE: true,
+                EXPERIENCE_ITEMS: [
+                    {
+                        POSITION: 'Senior Software Engineer',
+                        COMPANY: 'InnovaTech Solutions',
+                        DATE_RANGE: '2020 - Present',
+                        RESPONSIBILITIES: true,
+                        RESPONSIBILITY_LIST: [
+                            'Developed responsive web applications serving 100K+ users',
+                            'Built REST APIs using Node.js and Express framework',
+                            'Implemented automated testing reducing deployment time by 40%',
+                            'Collaborated with product teams to deliver features on schedule'
+                        ],
+                        ACHIEVEMENTS: true,
+                        ACHIEVEMENT_LIST: [
+                            'Led migration to microservices architecture',
+                            'Mentored 3 junior developers'
+                        ]
+                    },
+                    {
+                        POSITION: 'Junior Developer',
+                        COMPANY: 'StartupXYZ',
+                        DATE_RANGE: '2018 - 2020',
+                        RESPONSIBILITIES: true,
+                        RESPONSIBILITY_LIST: [
+                            'Created frontend components using React and Redux',
+                            'Participated in agile development process',
+                            'Assisted in database design and optimization'
+                        ]
+                    }
+                ],
+                SKILLS: true,
+                SKILL_CATEGORIES: [
+                    {
+                        CATEGORY_NAME: 'Frontend',
+                        SKILLS_LIST: 'React, JavaScript, HTML5, CSS3, Redux'
+                    },
+                    {
+                        CATEGORY_NAME: 'Backend',
+                        SKILLS_LIST: 'Node.js, Express, Python, REST APIs'
+                    },
+                    {
+                        CATEGORY_NAME: 'Database',
+                        SKILLS_LIST: 'PostgreSQL, MongoDB, Redis'
+                    },
+                    {
+                        CATEGORY_NAME: 'Cloud & DevOps',
+                        SKILLS_LIST: 'AWS (EC2, S3), Docker, Jenkins'
+                    }
+                ],
+                EDUCATION: true,
+                EDUCATION_ITEMS: [
+                    {
+                        DEGREE: 'Bachelor of Science in Computer Science',
+                        SCHOOL: 'University of California, Berkeley',
+                        GRADUATION_YEAR: '2018',
+                        GPA: '3.7/4.0',
+                        RELEVANT_COURSEWORK: 'Data Structures, Algorithms, Database Systems, Software Engineering'
+                    }
+                ],
+                CERTIFICATIONS: true,
+                CERTIFICATION_LIST: [
+                    {
+                        CERTIFICATION_NAME: 'AWS Certified Developer Associate',
+                        ISSUING_ORGANIZATION: 'Amazon Web Services',
+                        DATE: '2021'
+                    },
+                    {
+                        CERTIFICATION_NAME: 'Google Analytics Certified',
+                        ISSUING_ORGANIZATION: 'Google',
+                        DATE: '2020'
+                    }
+                ]
+            },
+            
+            'minimal': {
+                TITLE: 'Simple Resume',
+                NAME: 'Jane Doe',
+                JOB_TITLE: 'Software Developer',
+                EMAIL: 'jane@email.com',
+                PHONE: '(555) 987-6543',
+                LOCATION: 'New York, NY',
+                LINKEDIN: 'linkedin.com/in/janedoe',
+                SUMMARY: 'Passionate software developer with 3 years of experience building web applications.',
+                EXPERIENCE: true,
+                EXPERIENCE_ITEMS: [
+                    {
+                        POSITION: 'Software Developer',
+                        COMPANY: 'Tech Corp',
+                        DATE_RANGE: '2021 - Present',
+                        RESPONSIBILITIES: true,
+                        RESPONSIBILITY_LIST: [
+                            'Develop web applications using modern frameworks',
+                            'Collaborate with team members on project delivery'
+                        ]
+                    }
+                ],
+                SKILLS: true,
+                SKILL_CATEGORIES: [
+                    {
+                        CATEGORY_NAME: 'Programming',
+                        SKILLS_LIST: 'JavaScript, Python, React'
+                    }
+                ],
+                EDUCATION: true,
+                EDUCATION_ITEMS: [
+                    {
+                        DEGREE: 'Bachelor of Science in Computer Science',
+                        SCHOOL: 'State University',
+                        GRADUATION_YEAR: '2021'
+                    }
+                ]
+            }
+        };
+
+        let currentSampleData = sampleDataSets['software-engineer'];
+
+        // Template rendering engine (simple mustache-like)
+        function renderTemplate(template, data) {
+            let rendered = template;
+            
+            // Simple variable substitution {{VARIABLE}}
+            rendered = rendered.replace(/\{\{([^#\/\}]+)\}\}/g, (match, key) => {
+                return data[key] || '';
+            });
+            
+            // Conditional sections {{#SECTION}}...{{/SECTION}}
+            rendered = rendered.replace(/\{\{#([^}]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (match, key, content) => {
+                if (data[key]) {
+                    if (Array.isArray(data[key])) {
+                        return data[key].map(item => renderTemplate(content, item)).join('');
+                    } else {
+                        return renderTemplate(content, data);
+                    }
+                }
+                return '';
+            });
+            
+            // Array iteration {{#LIST}}{{.}}{{/LIST}}
+            rendered = rendered.replace(/\{\{#([^}]+)\}\}\{\{\.\}\}\{\{\/\1\}\}/g, (match, key) => {
+                if (data[key] && Array.isArray(data[key])) {
+                    return data[key].join('');
+                }
+                return '';
+            });
+            
+            return rendered;
+        }
+
+        // Load template from file
+        async function loadTemplate() {
+            try {
+                showEditorStatus('Loading template...', 'info');
+                const response = await fetch('resume-template.html');
+                const template = await response.text();
+                document.getElementById('templateEditor').value = template;
+                showEditorStatus('✅ Template loaded successfully', 'success');
+                
+                // Auto-render preview
+                setTimeout(renderPreview, 500);
+            } catch (error) {
+                showEditorStatus(`❌ Error loading template: ${error.message}`, 'error');
+            }
+        }
+
+        // Save template to localStorage
+        function saveTemplate() {
+            const template = document.getElementById('templateEditor').value;
+            localStorage.setItem('resumeTemplate', template);
+            showEditorStatus('💾 Template saved to browser storage', 'success');
+        }
+
+        // Load template from localStorage
+        function loadSavedTemplate() {
+            const saved = localStorage.getItem('resumeTemplate');
+            if (saved) {
+                document.getElementById('templateEditor').value = saved;
+                showEditorStatus('📂 Loaded saved template from browser storage', 'info');
+            }
+        }
+
+        // Render preview
+        function renderPreview() {
+            try {
+                const template = document.getElementById('templateEditor').value;
+                currentRenderedHTML = renderTemplate(template, currentSampleData);
+                
+                if (isRawHTMLMode) {
+                    document.getElementById('previewArea').innerHTML = `<pre style="white-space: pre-wrap; font-family: monospace; font-size: 11px;">${escapeHtml(currentRenderedHTML)}</pre>`;
+                } else {
+                    document.getElementById('previewArea').innerHTML = currentRenderedHTML;
+                }
+                
+                showPreviewStatus('✅ Preview updated successfully', 'success');
+                
+                // Auto-save
+                saveTemplate();
+            } catch (error) {
+                showPreviewStatus(`❌ Preview error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test PDF generation
+        async function testPDFGeneration() {
+            if (!currentRenderedHTML) {
+                showEditorStatus('⚠️ Please render preview first', 'error');
+                return;
+            }
+            
+            const testBtn = document.getElementById('pdfTestBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            testBtn.disabled = true;
+            testBtn.textContent = '🔄 Generating PDF...';
+            downloadBtn.disabled = true;
+            
+            showEditorStatus('📄 Generating PDF...', 'info');
+            
+            try {
+                const response = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: currentRenderedHTML })
+                });
+
+                if (response.ok) {
+                    lastPDFBlob = await response.blob();
+                    const sizeKB = (lastPDFBlob.size / 1024).toFixed(1);
+                    showEditorStatus(`🎉 PDF generated successfully! (${sizeKB} KB)`, 'success');
+                    downloadBtn.disabled = false;
+                } else {
+                    throw new Error(`PDF generation failed: ${response.status} ${response.statusText}`);
+                }
+            } catch (error) {
+                showEditorStatus(`❌ PDF generation failed: ${error.message}`, 'error');
+                lastPDFBlob = null;
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '🚀 Test PDF Generation';
+            }
+        }
+
+        // Download PDF
+        function downloadPDF() {
+            if (!lastPDFBlob) {
+                showEditorStatus('❌ No PDF to download. Generate one first.', 'error');
+                return;
+            }
+            
+            const url = URL.createObjectURL(lastPDFBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `resume-template-test-${new Date().toISOString().split('T')[0]}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showEditorStatus('📥 PDF downloaded successfully!', 'success');
+        }
+
+        // Load sample data
+        function loadSampleData(type) {
+            if (sampleDataSets[type]) {
+                currentSampleData = sampleDataSets[type];
+                showEditorStatus(`📊 Loaded ${type} sample data`, 'info');
+                renderPreview();
+            }
+        }
+
+        // Validate template
+        function validateTemplate() {
+            const template = document.getElementById('templateEditor').value;
+            const issues = [];
+            
+            // Check for common issues
+            if (!template.includes('<!DOCTYPE html>')) {
+                issues.push('Missing DOCTYPE declaration');
+            }
+            if (!template.includes('<title>')) {
+                issues.push('Missing title tag');
+            }
+            if (!template.includes('{{NAME}}')) {
+                issues.push('Template should include {{NAME}} variable');
+            }
+            
+            // Check for unmatched template tags
+            const openTags = (template.match(/\{\{#[^}]+\}\}/g) || []).length;
+            const closeTags = (template.match(/\{\{\/[^}]+\}\}/g) || []).length;
+            if (openTags !== closeTags) {
+                issues.push(`Unmatched template tags: ${openTags} open, ${closeTags} close`);
+            }
+            
+            if (issues.length === 0) {
+                showEditorStatus('✅ Template validation passed!', 'success');
+            } else {
+                showEditorStatus(`⚠️ Validation issues: ${issues.join(', ')}`, 'error');
+            }
+        }
+
+        // Show raw HTML
+        function showRawHTML() {
+            if (!currentRenderedHTML) {
+                showPreviewStatus('⚠️ No rendered HTML to show. Render preview first.', 'error');
+                return;
+            }
+            
+            const newWindow = window.open('', '_blank');
+            newWindow.document.write(`<pre style="white-space: pre-wrap; font-family: monospace; padding: 20px;">${escapeHtml(currentRenderedHTML)}</pre>`);
+            newWindow.document.title = 'Raw HTML Output';
+        }
+
+        // Toggle preview mode
+        function togglePreviewMode() {
+            isRawHTMLMode = !isRawHTMLMode;
+            renderPreview();
+            showPreviewStatus(`Switched to ${isRawHTMLMode ? 'raw HTML' : 'rendered'} view`, 'info');
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showEditorStatus(message, type) {
+            const statusEl = document.getElementById('editorStatus');
+            statusEl.innerHTML = `<div class="status-bar status-${type}">${message}</div>`;
+        }
+
+        function showPreviewStatus(message, type) {
+            const statusEl = document.getElementById('previewStatus');
+            statusEl.innerHTML = `<div class="status-bar status-${type}">${message}</div>`;
+        }
+
+        // Auto-save on typing
+        document.getElementById('templateEditor').addEventListener('input', () => {
+            clearTimeout(window.autoSaveTimeout);
+            window.autoSaveTimeout = setTimeout(() => {
+                saveTemplate();
+                renderPreview();
+            }, 1000);
+        });
+
+        // Initialize
+        window.addEventListener('load', () => {
+            // Try to load saved template first, then fall back to file
+            const saved = localStorage.getItem('resumeTemplate');
+            if (saved) {
+                loadSavedTemplate();
+                renderPreview();
+            } else {
+                loadTemplate();
+            }
+        });
+    </script>
+</body>
+</html>

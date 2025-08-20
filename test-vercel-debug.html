@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Vercel PDF Service - Debug URI Issues</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        pre { background: #f8f8f8; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Vercel PDF Service URI Issues</h1>
+        
+        <div class="test-section">
+            <h3>Test 1: Ultra Simple HTML</h3>
+            <button onclick="testSimpleHTML()">Test Simple HTML</button>
+            <div id="simple-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: HTML with Special Characters</h3>
+            <button onclick="testSpecialChars()">Test Special Characters</button>
+            <div id="special-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: Actual Resume HTML (Cleaned)</h3>
+            <button onclick="testResumeHTML()">Test Resume HTML</button>
+            <div id="resume-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: URL Encoding Test</h3>
+            <button onclick="testURLEncoding()">Test URL Encoding</button>
+            <div id="encoding-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const PDF_SERVICE_URL = 'https://pdf-service2-5xlwxkuud-avidshotzs-projects.vercel.app/api/success';
+
+        async function testPDFService(html, testName) {
+            const resultDiv = document.getElementById(`${testName}-result`);
+            resultDiv.innerHTML = `<p>🚀 Testing ${testName}...</p>`;
+
+            try {
+                console.log(`🔍 Testing ${testName} with HTML:`, html);
+                
+                const payload = { html: html };
+                const payloadStr = JSON.stringify(payload);
+                const payloadSize = new Blob([payloadStr]).size;
+                
+                console.log(`📊 ${testName} payload size:`, payloadSize, 'bytes');
+                
+                const response = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: payloadStr
+                });
+
+                console.log(`📡 ${testName} response status:`, response.status);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ ${testName} SUCCESS!</p>
+                        <p>Response: ${response.status}</p>
+                        <p>PDF Size: ${(blob.size / 1024).toFixed(1)} KB</p>
+                        <p>Payload Size: ${payloadSize} bytes</p>
+                    `;
+                } else {
+                    const errorText = await response.text();
+                    console.error(`❌ ${testName} error:`, errorText);
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ ${testName} FAILED</p>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${errorText}</p>
+                        <p>Payload Size: ${payloadSize} bytes</p>
+                    `;
+                }
+            } catch (error) {
+                console.error(`💥 ${testName} exception:`, error);
+                resultDiv.innerHTML = `
+                    <p class="error">💥 ${testName} EXCEPTION</p>
+                    <p>Error: ${error.message}</p>
+                `;
+            }
+        }
+
+        function testSimpleHTML() {
+            const html = `<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Simple Test</h1><p>Hello World</p></body></html>`;
+            testPDFService(html, 'simple');
+        }
+
+        function testSpecialChars() {
+            const html = `<!DOCTYPE html><html><head><title>Special Chars</title></head><body><h1>Test & "Quotes" & 'Apostrophes'</h1><p>Characters: @#$%^&*()_+-={}[]|\\:";'<>?,./</p></body></html>`;
+            testPDFService(html, 'special');
+        }
+
+        function testResumeHTML() {
+            // This is the actual HTML structure that failed
+            const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Professional Resume</title><style>body{font-family:Arial,sans-serif;margin:20px;line-height:1.3;font-size:12px}h1{color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:5px;margin:10px 0;font-size:18px}h2{color:#34495e;margin-top:15px;margin-bottom:8px;font-size:14px}h3{color:#34495e;margin-top:12px;margin-bottom:6px;font-size:13px}p{margin:5px 0;line-height:1.2}ul{margin:5px 0;padding-left:20px}li{margin:2px 0;line-height:1.2}.header{text-align:center;margin-bottom:15px}.section{margin:10px 0}.contact-info{background:#f8f9fa;padding:10px;border-radius:5px;margin-bottom:10px}</style></head><body><div class="header"><h1>Professional Resume</h1></div><div class="content"><h1>Charles Legard</h1><p>(804) 894 0307 - cclegard@gmail.com</p></div></body></html>`;
+            testPDFService(html, 'resume');
+        }
+
+        function testURLEncoding() {
+            // Test if we need to URL encode the HTML
+            const html = `<!DOCTYPE html><html><head><title>Test</title></head><body><p>Test</p></body></html>`;
+            
+            // Try sending as URL encoded
+            const urlEncodedPayload = { html: encodeURIComponent(html) };
+            testPDFService(html, 'encoding');
+        }
+    </script>
+</body>
+</html>

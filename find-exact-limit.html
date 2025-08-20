@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Find Exact Character Limit</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        button { background: #007acc; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005c99; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        input { width: 100px; padding: 5px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Find Exact Character Limit</h1>
+    <p>Let's find the exact character limit that causes the URI malformed error</p>
+    
+    <div>
+        <label>Test Size: </label>
+        <input type="number" id="testSize" value="2500" min="100" max="10000" step="100">
+        <button onclick="testSize()">Test This Size</button>
+    </div>
+    
+    <button onclick="testSizes()">Auto Test Multiple Sizes</button>
+    <button onclick="testBinarySearch()">Binary Search for Limit</button>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        const PDF_SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+        let testResults = [];
+
+        function showStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function addResult(size, success, details) {
+            testResults.push({ size, success, details });
+            updateResults();
+        }
+
+        function updateResults() {
+            const resultsEl = document.getElementById('results');
+            let html = '<h3>Test Results:</h3>';
+            testResults.forEach(result => {
+                const icon = result.success ? '✅' : '❌';
+                html += `<div class="status ${result.success ? 'success' : 'error'}">${icon} ${result.size} chars: ${result.details}</div>`;
+            });
+            resultsEl.innerHTML = html;
+        }
+
+        function generateHTMLOfSize(targetSize) {
+            let html = `<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h1>Character Limit Test</h1>
+    <p>This HTML is designed to be exactly ${targetSize} characters long.</p>
+    <div>`;
+            
+            // Add content until we reach the target size
+            const baseLength = html.length + '</div></body></html>'.length;
+            const contentNeeded = targetSize - baseLength;
+            
+            if (contentNeeded > 0) {
+                const repeatText = 'This is test content to reach the target character count. ';
+                const repeatCount = Math.ceil(contentNeeded / repeatText.length);
+                let content = repeatText.repeat(repeatCount);
+                content = content.substring(0, contentNeeded);
+                html += content;
+            }
+            
+            html += '</div></body></html>';
+            return html;
+        }
+
+        async function testPDFWithSize(size) {
+            const html = generateHTMLOfSize(size);
+            const actualSize = html.length;
+            
+            showStatus(`🔄 Testing ${actualSize} characters...`, 'info');
+            
+            try {
+                const response = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: html })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const sizeKB = (blob.size / 1024).toFixed(1);
+                    addResult(actualSize, true, `SUCCESS - PDF: ${sizeKB}KB`);
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    addResult(actualSize, false, `HTTP ${response.status} - ${errorText.substring(0, 100)}`);
+                    return false;
+                }
+            } catch (error) {
+                addResult(actualSize, false, `ERROR: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testSize() {
+            const size = parseInt(document.getElementById('testSize').value);
+            await testPDFWithSize(size);
+        }
+
+        async function testSizes() {
+            showStatus('🔄 Testing multiple sizes...', 'info');
+            const sizes = [1000, 1500, 2000, 2500, 3000, 3500, 4000];
+            
+            for (const size of sizes) {
+                await testPDFWithSize(size);
+                // Add a small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            showStatus('✅ Multiple size tests completed', 'success');
+        }
+
+        async function testBinarySearch() {
+            showStatus('🔄 Binary search for exact limit...', 'info');
+            
+            let low = 1000;
+            let high = 5000;
+            let lastWorking = 0;
+            
+            while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                const result = await testPDFWithSize(mid);
+                
+                if (result) {
+                    lastWorking = mid;
+                    low = mid + 100; // Try larger
+                } else {
+                    high = mid - 100; // Try smaller
+                }
+                
+                // Add delay between tests
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            showStatus(`🎯 Binary search complete! Last working size: ${lastWorking} characters`, 'success');
+        }
+    </script>
+</body>
+</html>

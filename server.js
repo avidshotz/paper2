@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const SUPABASE_URL = 'https://sdlmyaffbnjkmzwpdwqp.supabase.co';
 
 const app = express();
 const PORT = process.env.PORT || 3001;

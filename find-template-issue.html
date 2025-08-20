@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Find Template Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        button { background: #007acc; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005c99; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Find Template Issue</h1>
+    <p>URLs work fine, so let's find what specific content breaks the template</p>
+    
+    <button onclick="testShortResume()">Test: Short Resume</button>
+    <button onclick="testMediumResume()">Test: Medium Resume</button>
+    <button onclick="testLongContent()">Test: Long Content</button>
+    <button onclick="testSpecialChars()">Test: Special Characters</button>
+    <button onclick="testExactFullTemplate()">Test: Exact Full Template</button>
+    
+    <div id="status"></div>
+
+    <script>
+        const PDF_SERVICE_URL = 'https://pdf-service2-hid27m3hm-avidshotzs-projects.vercel.app/api/success';
+
+        function showStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function testPDF(name, html) {
+            showStatus(`🔄 Testing: ${name}...`, 'info');
+            console.log(`Testing: ${name}`);
+            console.log(`HTML length: ${html.length} characters`);
+            
+            try {
+                const response = await fetch(PDF_SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: html })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const sizeKB = (blob.size / 1024).toFixed(1);
+                    showStatus(`✅ ${name}: SUCCESS! PDF generated (${sizeKB} KB) - HTML: ${html.length} chars`, 'success');
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    showStatus(`❌ ${name}: FAILED! HTTP ${response.status} - HTML: ${html.length} chars - ${errorText.substring(0, 150)}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                showStatus(`❌ ${name}: ERROR! ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Test a shorter version
+        async function testShortResume() {
+            const html = `<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.3; font-size: 12px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        .contact-info { background: #f8f9fa; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>John Smith</h1>
+    <div class="contact-info">
+        <p><strong>Email:</strong> john.smith@email.com | <strong>Phone:</strong> (555) 123-4567</p>
+    </div>
+    <h2>Experience</h2>
+    <h3>Software Engineer | Company | 2020 - Present</h3>
+    <ul>
+        <li>Developed web applications</li>
+        <li>Built REST APIs</li>
+    </ul>
+</body>
+</html>`;
+            await testPDF('Short Resume', html);
+        }
+
+        // Test medium length
+        async function testMediumResume() {
+            const html = `<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.3; font-size: 12px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin: 10px 0; font-size: 18px; }
+        h2 { color: #34495e; margin-top: 15px; margin-bottom: 8px; font-size: 14px; }
+        h3 { color: #34495e; margin-top: 12px; margin-bottom: 6px; font-size: 13px; }
+        .contact-info { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+        .section { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>John Smith</h1>
+    <div class="contact-info">
+        <p><strong>Email:</strong> john.smith@email.com | <strong>Phone:</strong> (555) 123-4567</p>
+        <p><strong>Location:</strong> San Francisco, CA | <strong>LinkedIn:</strong> linkedin.com/in/johnsmith</p>
+    </div>
+
+    <h2>Professional Summary</h2>
+    <p>Experienced software engineer with 6+ years developing scalable web applications.</p>
+
+    <h2>Experience</h2>
+    <div class="section">
+        <h3>Software Engineer | InnovaTech Solutions | 2020 - Present</h3>
+        <ul>
+            <li>Developed responsive web applications serving 100K+ users</li>
+            <li>Built REST APIs using Node.js and Express framework</li>
+        </ul>
+    </div>
+
+    <h2>Skills</h2>
+    <ul>
+        <li><strong>Frontend:</strong> React, JavaScript, HTML5, CSS3</li>
+        <li><strong>Backend:</strong> Node.js, Express, Python</li>
+    </ul>
+</body>
+</html>`;
+            await testPDF('Medium Resume', html);
+        }
+
+        // Test with lots of content
+        async function testLongContent() {
+            const html = `<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.3; font-size: 12px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin: 10px 0; font-size: 18px; }
+        h2 { color: #34495e; margin-top: 15px; margin-bottom: 8px; font-size: 14px; }
+        h3 { color: #34495e; margin-top: 12px; margin-bottom: 6px; font-size: 13px; }
+        p { margin: 5px 0; line-height: 1.2; }
+        ul { margin: 5px 0; padding-left: 20px; }
+        li { margin: 2px 0; line-height: 1.2; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .section { margin: 10px 0; }
+        .contact-info { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>John Smith</h1>
+        <p>Senior Software Engineer</p>
+    </div>
+    
+    <div class="contact-info">
+        <p><strong>Email:</strong> john.smith@email.com | <strong>Phone:</strong> (555) 123-4567</p>
+        <p><strong>Location:</strong> San Francisco, CA | <strong>LinkedIn:</strong> linkedin.com/in/johnsmith</p>
+    </div>
+
+    <div class="content">
+        <h2>Professional Summary</h2>
+        <p>Experienced software engineer with 6+ years developing scalable web applications. Proven track record in full-stack development using modern technologies including React, Node.js, and cloud platforms.</p>
+
+        <h2>Experience</h2>
+        <div class="section">
+            <h3>Software Engineer | InnovaTech Solutions | 2020 - Present</h3>
+            <ul>
+                <li>Developed responsive web applications serving 100K+ users</li>
+                <li>Built REST APIs using Node.js and Express framework</li>
+                <li>Implemented automated testing reducing deployment time by 40%</li>
+                <li>Collaborated with product teams to deliver features on schedule</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Junior Developer | StartupXYZ | 2018 - 2020</h3>
+            <ul>
+                <li>Created frontend components using React and Redux</li>
+                <li>Participated in agile development process</li>
+                <li>Assisted in database design and optimization</li>
+            </ul>
+        </div>
+
+        <h2>Skills</h2>
+        <ul>
+            <li><strong>Frontend:</strong> React, JavaScript, HTML5, CSS3, Redux</li>
+            <li><strong>Backend:</strong> Node.js, Express, Python, REST APIs</li>
+            <li><strong>Databases:</strong> PostgreSQL, MongoDB</li>
+            <li><strong>Cloud:</strong> AWS (EC2, S3), Docker</li>
+            <li><strong>Tools:</strong> Git, Jest, Webpack</li>
+        </ul>
+
+        <h2>Education</h2>
+        <p><strong>Bachelor of Science in Computer Science</strong><br>
+        University of California, Berkeley | 2018</p>
+    </div>
+</body>
+</html>`;
+            await testPDF('Long Content', html);
+        }
+
+        // Test for special characters that might cause URI issues
+        async function testSpecialChars() {
+            const html = `<html>
+<head><meta charset="UTF-8"><title>Test</title></head>
+<body>
+    <h1>Test Special Characters</h1>
+    <p>Symbols: @#$%^&*()_+-=[]{}|;':",./<>?</p>
+    <p>Numbers: 100K+ users</p>
+    <p>Percentages: 40% improvement</p>
+    <p>Parentheses: (555) 123-4567</p>
+    <p>Pipes: Email | Phone | Location</p>
+</body>
+</html>`;
+            await testPDF('Special Characters', html);
+        }
+
+        // Test the exact same HTML that failed before
+        async function testExactFullTemplate() {
+            // This is the EXACT HTML from your previous test that failed
+            const html = `<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.3; 
+            font-size: 12px;
+        }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 2px solid #3498db; 
+            padding-bottom: 5px; 
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        h2 { 
+            color: #34495e; 
+            margin-top: 15px; 
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        h3 { 
+            color: #34495e; 
+            margin-top: 12px; 
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        p { 
+            margin: 5px 0; 
+            line-height: 1.2;
+        }
+        ul { 
+            margin: 5px 0; 
+            padding-left: 20px;
+        }
+        li { 
+            margin: 2px 0; 
+            line-height: 1.2;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 15px; 
+        }
+        .section { 
+            margin: 10px 0; 
+        }
+        .contact-info { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>John Smith</h1>
+        <p>Senior Software Engineer</p>
+    </div>
+    
+    <div class="contact-info">
+        <p><strong>Email:</strong> john.smith@email.com | <strong>Phone:</strong> (555) 123-4567</p>
+        <p><strong>Location:</strong> San Francisco, CA | <strong>LinkedIn:</strong> linkedin.com/in/johnsmith</p>
+    </div>
+
+    <div class="content">
+        <h2>Professional Summary</h2>
+        <p>Experienced software engineer with 6+ years developing scalable web applications. Proven track record in full-stack development using modern technologies including React, Node.js, and cloud platforms.</p>
+
+        <h2>Experience</h2>
+        <div class="section">
+            <h3>Software Engineer | InnovaTech Solutions | 2020 - Present</h3>
+            <ul>
+                <li>Developed responsive web applications serving 100K+ users</li>
+                <li>Built REST APIs using Node.js and Express framework</li>
+                <li>Implemented automated testing reducing deployment time by 40%</li>
+                <li>Collaborated with product teams to deliver features on schedule</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Junior Developer | StartupXYZ | 2018 - 2020</h3>
+            <ul>
+                <li>Created frontend components using React and Redux</li>
+                <li>Participated in agile development process</li>
+                <li>Assisted in database design and optimization</li>
+            </ul>
+        </div>
+
+        <h2>Skills</h2>
+        <ul>
+            <li><strong>Frontend:</strong> React, JavaScript, HTML5, CSS3, Redux</li>
+            <li><strong>Backend:</strong> Node.js, Express, Python, REST APIs</li>
+            <li><strong>Databases:</strong> PostgreSQL, MongoDB</li>
+            <li><strong>Cloud:</strong> AWS (EC2, S3), Docker</li>
+            <li><strong>Tools:</strong> Git, Jest, Webpack</li>
+        </ul>
+
+        <h2>Education</h2>
+        <p><strong>Bachelor of Science in Computer Science</strong><br>
+        University of California, Berkeley | 2018</p>
+    </div>
+</body>
+</html>`;
+            await testPDF('Exact Full Template', html);
+        }
+    </script>
+</body>
+</html>
