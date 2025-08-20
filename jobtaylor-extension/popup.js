@@ -317,7 +317,10 @@ async function updateUserInfoButton() {
             const subscriptionSpan = userInfoBtn.querySelector('.user-subscription');
             
             if (rateLimitInfo) {
-                const remaining = Math.max(0, (rateLimitInfo.monthly_limit || 10) - (rateLimitInfo.usage_count || 0));
+                // Calculate remaining the same way as the gray text below
+                const used = rateLimitInfo.monthly_generations || 0;
+                const total = 10;
+                const remaining = Math.max(0, total - used);
                 if (creditsSpan) {
                     creditsSpan.textContent = `Credits: ${remaining}`;
                 }
@@ -499,16 +502,6 @@ function setupEventListeners() {
     // Generate button
     addEventListenerSafely('generateBtn', 'click', handleGenerate);
     
-    // View buttons
-    addEventListenerSafely('viewResumeBtn', 'click', () => viewSavedContent('resume'));
-    addEventListenerSafely('viewCoverBtn', 'click', () => viewSavedContent('cover'));
-    
-    // Download button
-    addEventListenerSafely('downloadBtn', 'click', downloadContent);
-    
-    // Regenerate button
-    addEventListenerSafely('regenerateBtn', 'click', handleGenerate);
-    
     // Resume selection change
     const resumeSelect = document.getElementById('resumeSelect');
     if (resumeSelect) {
@@ -630,9 +623,9 @@ function showResumeManager() {
         </div>
         
         <div class="resume-manager-buttons">
-            <button id="saveResumeBtn" class="btn-success">💾 Save Resume</button>
-            <button id="previewResumeBtn" class="btn-primary">👁️ Preview Resume</button>
-            <button id="closeResumeManagerBtn" class="btn-secondary">❌ Close</button>
+            <button id="saveResumeBtn" class="btn btn-success">💾 Save Resume</button>
+            <button id="previewResumeBtn" class="btn btn-primary">👁️ Preview Resume</button>
+            <button id="closeResumeManagerBtn" class="btn btn-secondary">❌ Close</button>
         </div>
         
         <div class="resume-manager-tip">
@@ -690,8 +683,8 @@ function previewCurrentResume() {
         ` : ''}
         
         <div class="preview-actions">
-            <button onclick="showResumeManager()" class="btn-secondary">← Back to Editor</button>
-            <button onclick="viewAllResumes()" class="btn-primary">📋 View All Resumes</button>
+            <button onclick="showResumeManager()" class="btn btn-secondary">← Back to Editor</button>
+            <button onclick="viewAllResumes()" class="btn btn-primary">📋 View All Resumes</button>
         </div>
     `;
 }
@@ -739,7 +732,7 @@ function viewAllResumes() {
         });
         
         html += `
-            <button onclick="showResumeManager()" class="btn-secondary">← Back to Editor</button>
+            <button onclick="showResumeManager()" class="btn btn-secondary">← Back to Editor</button>
         `;
         
         outputElement.innerHTML = html;
@@ -798,9 +791,9 @@ function viewSpecificResume(resumeId) {
         
         html += `
             <div class="resume-detail-actions">
-                <button onclick="selectResume('${resumeId}')" class="btn-success">✅ Select This Resume</button>
-                <button onclick="viewAllResumes()" class="btn-secondary">← Back to All Resumes</button>
-                <button onclick="showResumeManager()" class="btn-primary">📝 Edit Resumes</button>
+                <button onclick="selectResume('${resumeId}')" class="btn btn-success">✅ Select This Resume</button>
+                <button onclick="viewAllResumes()" class="btn btn-secondary">← Back to All Resumes</button>
+                <button onclick="showResumeManager()" class="btn btn-primary">📝 Edit Resumes</button>
             </div>
         `;
         
@@ -817,7 +810,7 @@ function selectResume(resumeId) {
         <div class="success-message">
             <p>✅ Resume selected successfully!</p>
         </div>
-        <button onclick="showResumeManager()" class="btn-secondary">← Back to Editor</button>
+        <button onclick="showResumeManager()" class="btn btn-secondary">← Back to Editor</button>
     `;
     
     updateResumeSelector();
@@ -865,8 +858,8 @@ function processLoadedResume(file) {
                         Content length: ${resumeContent.length} characters</p>
                     </div>
                     <div class="load-actions">
-                        <button onclick="showResumeManager()" class="btn-success">📝 Manage Resumes</button>
-                        <button onclick="clearLoadResume()" class="btn-secondary">❌ Close</button>
+                        <button onclick="showResumeManager()" class="btn btn-success">📝 Manage Resumes</button>
+                        <button onclick="clearLoadResume()" class="btn btn-secondary">❌ Close</button>
                     </div>
                 `;
                 
@@ -1155,7 +1148,7 @@ async function handleGenerate() {
     } finally {
         // Reset button state
         generateBtn.disabled = false;
-        generateBtn.innerText = 'Generate Recommendations';
+        generateBtn.innerText = '🪄 Tailor with AI';
     }
 }
 
@@ -1285,10 +1278,10 @@ function updateOutputDisplay(type, content) {
                 <p>Your tailored resume and cover letter are ready for download.</p>
                 
                 <div class="pdf-downloads">
-                    <button id="downloadResumeBtn" class="btn-success">
+                    <button id="downloadResumeBtn" class="btn btn-success">
                         📄 Download Resume (${content.resumeFileName})
                     </button>
-                    <button id="downloadCoverBtn" class="btn-primary">
+                    <button id="downloadCoverBtn" class="btn btn-primary">
                         ✉️ Download Cover Letter (${content.coverLetterFileName})
                     </button>
                 </div>
@@ -1309,36 +1302,7 @@ function updateOutputDisplay(type, content) {
     }
 }
 
-function viewSavedContent(type) {
-    console.log('viewSavedContent called with type:', type);
-    
-    chrome.storage.local.get(['resumeContent', 'coverLetterContent', 'resumePDF', 'coverLetterPDF'], (result) => {
-        console.log('Storage data for viewSavedContent:', {
-            hasResumeContent: !!result.resumeContent,
-            hasCoverContent: !!result.coverLetterContent,
-            hasResumePDF: !!result.resumePDF,
-            hasCoverPDF: !!result.coverLetterPDF
-        });
-        
-        let content = null;
-        
-        if (type === 'resume') {
-            // Try to get the clean content first, then fallback to PDF content
-            content = result.resumeContent || (result.resumePDF ? extractContentFromPDF(result.resumePDF) : null);
-        } else {
-            // Try to get the clean content first, then fallback to PDF content
-            content = result.coverLetterContent || (result.coverLetterPDF ? extractContentFromPDF(result.coverLetterPDF) : null);
-        }
-        
-        console.log('Content found for', type, ':', !!content);
-        
-        if (content) {
-            updateOutputDisplay(type, content);
-        } else {
-            document.getElementById('output').innerText = `No ${type} content available. Generate one first.`;
-        }
-    });
-}
+
 
 // Helper function to extract clean content from PDF HTML
 function extractContentFromPDF(pdfHtml) {
@@ -1386,61 +1350,7 @@ function updateButtonStates() {
             hasAnyContent 
         });
         
-        document.getElementById('viewResumeBtn').disabled = !hasResume;
-        document.getElementById('viewCoverBtn').disabled = !hasCover;
-        document.getElementById('downloadBtn').disabled = !hasAnyContent;
-        document.getElementById('regenerateBtn').disabled = !hasAnyContent;
-        
         console.log('Button states updated. Has any content:', hasAnyContent);
-    });
-}
-
-function downloadContent() {
-    chrome.storage.local.get(['resumeContent', 'coverLetterContent', 'resumePDF', 'coverLetterPDF', 'lastJobDescription'], (result) => {
-        let content = '';
-        
-        // Get resume content
-        let resumeContent = result.resumeContent;
-        if (!resumeContent && result.resumePDF) {
-            resumeContent = extractContentFromPDF(result.resumePDF);
-        }
-        
-        // Get cover letter content
-        let coverLetterContent = result.coverLetterContent;
-        if (!coverLetterContent && result.coverLetterPDF) {
-            coverLetterContent = extractContentFromPDF(result.coverLetterPDF);
-        }
-        
-        if (resumeContent) {
-            content += 'TAILORED RESUME\n';
-            content += '='.repeat(50) + '\n\n';
-            content += resumeContent + '\n\n';
-        }
-        
-        if (coverLetterContent) {
-            content += 'COVER LETTER\n';
-            content += '='.repeat(50) + '\n\n';
-            content += coverLetterContent + '\n\n';
-        }
-        
-        if (result.lastJobDescription) {
-            content += 'ORIGINAL JOB DESCRIPTION\n';
-            content += '='.repeat(50) + '\n\n';
-            content += result.lastJobDescription;
-        }
-        
-        if (content.trim()) {
-            // Create and download file
-            const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `tailored-resume-${new Date().toISOString().split('T')[0]}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-        } else {
-            alert('No content available to download. Please generate content first.');
-        }
     });
 }
 
@@ -1735,7 +1645,7 @@ async function handleGenerateInternal() {
     } finally {
         // Reset button state
         generateBtn.disabled = false;
-        generateBtn.innerText = 'Generate Recommendations';
+        generateBtn.innerText = '🪄 Tailor with AI';
     }
 }
   

@@ -1,0 +1,7 @@
+TO DO :
+ MAKE A SUPABASE TABLE FOR GENERATED RESUMES
+make the resume editor, etc. easier to work with (maybe use a small static webpage or something instead of having it on the bottom of the extension.
+Make sure Supabase can call the Vercel function and that you don't need any keys im not willing to give out
+
+make sure the app is organized and easy for both human and ai to read
+

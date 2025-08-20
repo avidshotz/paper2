@@ -50,6 +50,35 @@
       resize: vertical;
     }
 
+    /* Unified Button System */
+    .btn {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+      font-size: 1rem;
+      background: #4f46e5;
+      color: white;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .btn:hover {
+      background: #4338ca;
+      border-color: #4338ca;
+    }
+
+    .btn:disabled {
+      background: #6b7280;
+      border-color: #6b7280;
+      cursor: not-allowed;
+    }
+
+    /* Legacy support - all buttons use .btn class */
     button {
       margin-top: 10px;
       padding: 10px;
@@ -57,19 +86,23 @@
       font-size: 1rem;
       background: #4f46e5;
       color: white;
-      border: none;
+      border: 2px solid transparent;
       border-radius: 6px;
       cursor: pointer;
       -webkit-appearance: none;
       appearance: none;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
     }
 
     button:hover {
       background: #4338ca;
+      border-color: #4338ca;
     }
 
     button:disabled {
       background: #6b7280;
+      border-color: #6b7280;
       cursor: not-allowed;
     }
 
@@ -83,24 +116,6 @@
       border: 1px solid #ddd;
       max-height: 200px;
       overflow-y: auto;
-    }
-
-    #manageResumesBtn {
-      background: #059669;
-      margin-bottom: 8px;
-    }
-
-    #manageResumesBtn:hover {
-      background: #047857;
-    }
-
-    #loadResumeBtn {
-      background: #7c3aed;
-      margin-bottom: 8px;
-    }
-
-    #loadResumeBtn:hover {
-      background: #6d28d9;
     }
 
     .header {
@@ -208,32 +223,58 @@
       user-select: text;
     }
 
-    /* Button variants */
+    /* Button Color Variants */
     .btn-success {
-      background: #10b981 !important;
+      background: #10b981;
+      border-color: #10b981;
       margin-right: 5px;
     }
 
     .btn-success:hover {
-      background: #059669 !important;
+      background: #059669;
+      border-color: #059669;
     }
 
     .btn-primary {
-      background: #3b82f6 !important;
+      background: #3b82f6;
+      border-color: #3b82f6;
       margin-right: 5px;
     }
 
     .btn-primary:hover {
-      background: #2563eb !important;
+      background: #2563eb;
+      border-color: #2563eb;
     }
 
     .btn-secondary {
-      background: #6b7280 !important;
+      background: #6b7280;
+      border-color: #6b7280;
       margin-right: 5px;
     }
 
     .btn-secondary:hover {
-      background: #4b5563 !important;
+      background: #4b5563;
+      border-color: #4b5563;
+    }
+
+    .btn-purple {
+      background: #7c3aed;
+      border-color: #7c3aed;
+    }
+
+    .btn-purple:hover {
+      background: #6d28d9;
+      border-color: #6d28d9;
+    }
+
+    .btn-green {
+      background: #059669;
+      border-color: #059669;
+    }
+
+    .btn-green:hover {
+      background: #047857;
+      border-color: #047857;
     }
 
     /* Resume manager styles */
@@ -556,12 +597,14 @@
     }
 
     .auth-button {
-      background: #3b82f6 !important;
+      background: #3b82f6;
+      border-color: #3b82f6;
       margin-bottom: 8px;
     }
 
     .auth-button:hover {
-      background: #2563eb !important;
+      background: #2563eb;
+      border-color: #2563eb;
     }
 
     .rate-limit-info {
@@ -642,6 +685,35 @@
     .close-modal:hover {
       color: #374151;
     }
+
+    /* Button Group Layout */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 10px;
+    }
+
+    .button-group .btn {
+      margin-top: 0;
+      flex-shrink: 0;
+    }
+
+    .button-group .btn-load {
+      width: 33.33%;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: none;
+      font-size: 1.2rem;
+      min-width: 50px;
+    }
+
+    .button-group .btn-manage {
+      width: 66.67%;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
   </style>
 </head>
 <body>
@@ -660,7 +732,7 @@
   <!-- Authentication Section -->
   <div class="auth-section">
     <div id="authStatus" class="auth-status logged-out">Not logged in</div>
-    <button id="authButton" class="auth-button">Sign In</button>
+    <button id="authButton" class="btn auth-button">Sign In</button>
     <div id="rateLimitInfo" class="rate-limit-info">Sign in to start generating resumes</div>
   </div>
 
@@ -675,14 +747,13 @@
   <label for="jobDesc">📄 Job Description:</label>
   <textarea id="jobDesc" name="jobDesc" placeholder="Paste the job description here..." aria-label="Job description input"></textarea>
 
-  <button id="manageResumesBtn" title="Manage and edit your resume templates" aria-label="Manage resumes">📝 Manage Resumes</button>
-  <button id="loadResumeBtn" title="Load a resume file from your computer" aria-label="Load resume file">📂 Load Resume</button>
-  <button id="extractJobBtn" title="Extract job description from current page" aria-label="Extract job description">🔍 Extract Job Description</button>
-  <button id="generateBtn" title="Generate AI-tailored resume and cover letter" aria-label="Generate tailored content">🪄 Tailor with AI</button>
-  <button id="viewResumeBtn" title="View the generated tailored resume" aria-label="View tailored resume">🧾 View Tailored Resume</button>
-  <button id="viewCoverBtn" title="View the generated cover letter" aria-label="View cover letter">✉️ View Cover Letter</button>
-  <button id="downloadBtn" title="Download the generated content as a file" aria-label="Download content">📥 Download PDF</button>
-  <button id="regenerateBtn" title="Regenerate the tailored content" aria-label="Regenerate content">🔄 Regenerate</button>
+  <div class="button-group">
+    <button id="loadResumeBtn" class="btn btn-purple btn-load" title="Load a resume file from your computer" aria-label="Load resume file">📂</button>
+    <button id="manageResumesBtn" class="btn btn-green btn-manage" title="Manage and edit your resume templates" aria-label="Manage resumes">📝 Manage Resumes</button>
+  </div>
+  <button id="extractJobBtn" class="btn" title="Extract job description from current page" aria-label="Extract job description">🔍 Extract Job Description</button>
+  <button id="generateBtn" class="btn" title="Generate AI-tailored resume and cover letter" aria-label="Generate tailored content">🪄 Tailor with AI</button>
+
 
   <pre id="output" role="status" aria-live="polite"></pre>
 
