@@ -352,55 +352,79 @@ class JobDescriptionScrapers {
 
     // Generic fallback scraper
     genericScraper() {
+        console.log('🔍 Starting generic scraper...');
+        
         const selectors = [
-        '[class*="job-description"]',
-        '[class*="description"]',
-        '[id*="job-description"]',
-        '[id*="description"]',
-        'article',
-        '.content',
-        '.main-content'
-    ];
+            '[class*="job-description"]',
+            '[class*="description"]',
+            '[id*="job-description"]',
+            '[id*="description"]',
+            'article',
+            '.content',
+            '.main-content',
+            // Add more generic selectors
+            '[data-testid*="description"]',
+            '[data-test*="description"]',
+            '.job-details',
+            '.job-details-content',
+            '.job-content',
+            '.job-body',
+            '.job-info',
+            '.job-summary',
+            '.job-overview'
+        ];
   
         for (const selector of selectors) {
             const elements = document.querySelectorAll(selector);
+            console.log(`🔍 Trying selector "${selector}": found ${elements.length} elements`);
+            
             for (const element of elements) {
                 const text = element.innerText || element.textContent;
-            if (text && text.trim().length > 200) {
-                    console.log('Job description found using generic selector:', selector);
-                return text.trim();
+                if (text && text.trim().length > 200) {
+                    console.log(`✅ Job description found using generic selector: ${selector}`);
+                    console.log(`📄 Content preview: ${text.substring(0, 200)}...`);
+                    return text.trim();
+                }
             }
         }
-    }
     
         // Final fallback: try to find any large text block that might be a job description
         // But be very restrictive to avoid search results
-    const allElements = document.querySelectorAll('p, div, section, article');
+        console.log('🔍 Trying final fallback method...');
+        const allElements = document.querySelectorAll('p, div, section, article');
+        console.log(`🔍 Found ${allElements.length} potential elements for fallback`);
+        
         for (const element of allElements) {
             const text = element.innerText || element.textContent;
-        if (text && text.trim().length > 500 && 
-            (text.toLowerCase().includes('job') || 
-             text.toLowerCase().includes('position') || 
-             text.toLowerCase().includes('role') ||
-             text.toLowerCase().includes('responsibilities') ||
-             text.toLowerCase().includes('requirements'))) {
+            if (text && text.trim().length > 300 && 
+                (text.toLowerCase().includes('job') || 
+                 text.toLowerCase().includes('position') || 
+                 text.toLowerCase().includes('role') ||
+                 text.toLowerCase().includes('responsibilities') ||
+                 text.toLowerCase().includes('requirements') ||
+                 text.toLowerCase().includes('qualifications') ||
+                 text.toLowerCase().includes('duties'))) {
                 
-                // Skip if it looks like search results (ZipRecruiter specific)
+                // Skip if it looks like search results
                 if (text.toLowerCase().includes('1-click apply') || 
                     text.toLowerCase().includes('showing') ||
                     text.toLowerCase().includes('results') ||
                     text.toLowerCase().includes('jobs in') ||
+                    text.toLowerCase().includes('browse jobs') ||
+                    text.toLowerCase().includes('search jobs') ||
                     (text.includes('$') && text.includes('/hr') && text.length < 2000)) {
-                    console.log('Generic fallback: Skipping search results content');
+                    console.log('❌ Skipping search results content');
                     continue;
                 }
                 
-            console.log('Job description found using fallback method');
-            return text.trim();
+                console.log('✅ Job description found using fallback method');
+                console.log(`📄 Content preview: ${text.substring(0, 200)}...`);
+                return text.trim();
+            }
         }
-    }
-    
-    return null;
+        
+        console.log('❌ No job description found with any method');
+        return null;
     }
 }
 
@@ -506,25 +530,43 @@ new MutationObserver(() => {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('📨 Message received from popup:', request);
+    
     if (request.action === 'extractJobDescription') {
+        console.log('🔍 Extracting job description...');
         const jobText = extractJobText();
-        sendResponse({ jobText });
+        console.log('📄 Extraction result:', jobText ? `Found ${jobText.length} characters` : 'No text found');
+        
+        if (jobText) {
+            console.log('✅ Sending job text back to popup');
+            sendResponse({ jobText });
+        } else {
+            console.log('❌ No job text found, sending empty response');
+            sendResponse({ jobText: null });
+        }
     } else if (request.action === 'getAuthStatus') {
         // Return authentication status
+        console.log('🔐 Getting auth status...');
         sendResponse({ 
             isAuthenticated: auth ? auth.isAuthenticated() : false,
             auth: auth 
         });
     } else if (request.action === 'getAuthHeader') {
         // Return authorization header for API calls
+        console.log('🔐 Getting auth header...');
         if (auth) {
             auth.getAuthHeader().then(header => {
+                console.log('✅ Auth header obtained');
                 sendResponse({ authHeader: header });
             });
             return true; // Indicates async response
         } else {
+            console.log('❌ No auth available');
             sendResponse({ authHeader: null });
         }
+    } else {
+        console.log('❓ Unknown action:', request.action);
+        sendResponse({ error: 'Unknown action' });
     }
 });
 

@@ -893,13 +893,18 @@ async function extractJobFromCurrentPage() {
     outputElement.innerText = 'Extracting job description from current page...';
     
     try {
+        console.log('🔍 Starting job description extraction...');
+        
         // Get the active tab
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         
         if (!tab) {
+            console.error('❌ Could not access current tab');
             outputElement.innerText = 'Error: Could not access current tab.';
             return;
         }
+        
+        console.log('📄 Current tab:', tab.url);
         
         // Check if we're on a supported job site
         const supportedSites = [
@@ -911,19 +916,35 @@ async function extractJobFromCurrentPage() {
         const isJobSite = supportedSites.some(site => tab.url.includes(site));
         
         if (!isJobSite) {
-            outputElement.innerText = 'Please navigate to a job posting page (LinkedIn, Indeed, Glassdoor, etc.) first.';
-            return;
+            console.log('⚠️ Not on a supported job site, but will try extraction anyway');
+            outputElement.innerText = 'Not on a supported job site, but trying extraction anyway...';
+        } else {
+            console.log('✅ On a supported job site');
         }
         
         // Execute content script to extract job description
+        console.log('📨 Sending message to content script...');
         const results = await chrome.tabs.sendMessage(tab.id, { action: 'extractJobDescription' });
         
+        console.log('📨 Response from content script:', results);
+        
         if (results && results.jobText) {
+            console.log('✅ Job description extracted successfully');
+            console.log('📄 Job text length:', results.jobText.length);
+            console.log('📄 Job text preview:', results.jobText.substring(0, 200) + '...');
+            
             // Update the job description textarea
-            document.getElementById('jobDesc').value = results.jobText;
+            const jobDescTextarea = document.getElementById('jobDesc');
+            if (jobDescTextarea) {
+                jobDescTextarea.value = results.jobText;
+                console.log('✅ Updated job description textarea');
+            } else {
+                console.error('❌ Could not find jobDesc textarea');
+            }
             
             // Save to storage
             await chrome.storage.local.set({ jobText: results.jobText });
+            console.log('✅ Saved job text to storage');
             
             outputElement.innerText = `✅ Job description extracted successfully!\n\nLength: ${results.jobText.length} characters\n\nYou can now generate tailored recommendations.`;
             
@@ -933,12 +954,24 @@ async function extractJobFromCurrentPage() {
             }, 3000);
             
         } else {
-            outputElement.innerText = 'No job description found on this page. Please make sure you\'re on a job posting page.';
+            console.log('❌ No job description found in response');
+            console.log('📄 Full response:', results);
+            
+            if (results && results.error) {
+                outputElement.innerText = `Error: ${results.error}`;
+            } else {
+                outputElement.innerText = 'No job description found on this page. Please make sure you\'re on a job posting page.\n\n💡 Try:\n• Refreshing the page\n• Scrolling down to load more content\n• Making sure you\'re on a job detail page, not a search results page';
+            }
         }
         
     } catch (error) {
-        console.error('Error extracting job description:', error);
-        outputElement.innerText = 'Error extracting job description. Please refresh the page and try again.';
+        console.error('❌ Error extracting job description:', error);
+        
+        if (error.message.includes('Could not establish connection')) {
+            outputElement.innerText = 'Error: Content script not available. Please refresh the page and try again.';
+        } else {
+            outputElement.innerText = `Error extracting job description: ${error.message}\n\nPlease refresh the page and try again.`;
+        }
     }
 }
 
@@ -1646,6 +1679,39 @@ async function handleGenerateInternal() {
         // Reset button state
         generateBtn.disabled = false;
         generateBtn.innerText = '🪄 Tailor with AI';
+    }
+}
+
+// Debug function to test extraction manually
+async function debugExtraction() {
+    const outputElement = document.getElementById('output');
+    outputElement.innerText = '🔍 Debugging extraction...';
+    
+    try {
+        console.log('🔍 Starting debug extraction...');
+        
+        // Get the active tab
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        if (!tab) {
+            outputElement.innerText = '❌ Could not access current tab';
+            return;
+        }
+        
+        outputElement.innerText = `🔍 Debugging extraction on: ${tab.url}\n\nChecking content script availability...`;
+        
+        // First, check if content script is available
+        try {
+            const results = await chrome.tabs.sendMessage(tab.id, { action: 'extractJobDescription' });
+            outputElement.innerText += `\n✅ Content script responded\n📄 Response: ${JSON.stringify(results, null, 2)}`;
+        } catch (error) {
+            outputElement.innerText += `\n❌ Content script error: ${error.message}`;
+            outputElement.innerText += '\n\n💡 Try refreshing the page and clicking the button again.';
+            return;
+        }
+        
+    } catch (error) {
+        outputElement.innerText = `❌ Debug error: ${error.message}`;
     }
 }
   
