@@ -924,7 +924,31 @@ async function extractJobFromCurrentPage() {
         
         // Execute content script to extract job description
         console.log('📨 Sending message to content script...');
-        const results = await chrome.tabs.sendMessage(tab.id, { action: 'extractJobDescription' });
+        
+        let results;
+        try {
+            results = await chrome.tabs.sendMessage(tab.id, { action: 'extractJobDescription' });
+        } catch (error) {
+            console.log('❌ Content script not available, trying to inject manually...');
+            
+            // Try to inject the content script manually
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content.js']
+                });
+                
+                // Wait a moment for the script to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Try the message again
+                results = await chrome.tabs.sendMessage(tab.id, { action: 'extractJobDescription' });
+                console.log('✅ Manual injection successful');
+            } catch (injectionError) {
+                console.error('❌ Manual injection failed:', injectionError);
+                throw new Error('Content script could not be loaded. Please refresh the page and try again.');
+            }
+        }
         
         console.log('📨 Response from content script:', results);
         
@@ -953,15 +977,13 @@ async function extractJobFromCurrentPage() {
                 outputElement.innerText = '';
             }, 3000);
             
+        } else if (results && results.error) {
+            outputElement.innerText = `Error: ${results.error}`;
+            console.log('❌ Content script error:', results.error);
         } else {
             console.log('❌ No job description found in response');
             console.log('📄 Full response:', results);
-            
-            if (results && results.error) {
-                outputElement.innerText = `Error: ${results.error}`;
-            } else {
-                outputElement.innerText = 'No job description found on this page. Please make sure you\'re on a job posting page.\n\n💡 Try:\n• Refreshing the page\n• Scrolling down to load more content\n• Making sure you\'re on a job detail page, not a search results page';
-            }
+            outputElement.innerText = 'No job description found on this page. Please make sure you\'re on a job posting page.\n\n💡 Try:\n• Refreshing the page\n• Scrolling down to load more content\n• Making sure you\'re on a job detail page, not a search results page';
         }
         
     } catch (error) {

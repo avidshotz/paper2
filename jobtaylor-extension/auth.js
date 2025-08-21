@@ -343,3 +343,6 @@ if (typeof module !== 'undefined' && module.exports) {
     console.log('🔧 RezlieAuth class registered on window object');
     console.log('🔍 RezlieAuth type:', typeof RezlieAuth);
 }
+
+// ES6 export for dynamic imports
+export { RezlieAuth };

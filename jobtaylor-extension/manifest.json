@@ -19,7 +19,8 @@
   "permissions": [
     "storage",
     "activeTab",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://*.supabase.co/*",
@@ -27,7 +28,9 @@
     "https://*.indeed.com/*",
     "https://*.glassdoor.com/*",
     "https://*.monster.com/*",
-    "https://*.careerbuilder.com/*"
+    "https://*.careerbuilder.com/*",
+    "https://*.ziprecruiter.com/*",
+    "https://*.simplyhired.com/*"
   ],
   "content_scripts": [
     {
@@ -41,7 +44,7 @@
         "https://*.simplyhired.com/*"
       ],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_start"
     }
   ],
   "content_security_policy": {
@@ -49,7 +52,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icon*.png"],
+      "resources": ["icon*.png", "auth.js"],
       "matches": ["<all_urls>"]
     }
   ]
