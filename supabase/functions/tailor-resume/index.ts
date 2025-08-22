@@ -189,8 +189,8 @@ async function generateHTML(content, title) {
   const safeTitle = sanitizeTitle(title);
   // Note: We don't escape the content itself since it's already HTML
   // but we do sanitize the title which goes into attributes
-  // Generate compact HTML with minimal whitespace
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>body{font-family:Arial,sans-serif;margin:20px;line-height:1.3;font-size:12px}h1{color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:5px;margin:10px 0;font-size:18px}h2{color:#34495e;margin-top:15px;margin-bottom:8px;font-size:14px}h3{color:#34495e;margin-top:12px;margin-bottom:6px;font-size:13px}p{margin:5px 0;line-height:1.2}ul{margin:5px 0;padding-left:20px}li{margin:2px 0;line-height:1.2}.header{text-align:center;margin-bottom:15px}.section{margin:10px 0}.contact-info{background:#f8f9fa;padding:10px;border-radius:5px;margin-bottom:10px}</style></head><body><div class="header"><h1>${safeTitle}</h1></div><div class="content">${cleanContent}</div></body></html>`;
+  // Generate compact HTML with minimal whitespace - removed header title
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>body{font-family:Arial,sans-serif;margin:20px;line-height:1.3;font-size:12px}h1{color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:5px;margin:10px 0;font-size:18px}h2{color:#34495e;margin-top:15px;margin-bottom:8px;font-size:14px}h3{color:#34495e;margin-top:12px;margin-bottom:6px;font-size:13px}p{margin:5px 0;line-height:1.2}ul{margin:5px 0;padding-left:20px}li{margin:2px 0;line-height:1.2}.section{margin:10px 0}.contact-info{background:#f8f9fa;padding:10px;border-radius:5px;margin-bottom:10px}</style></head><body><div class="content">${cleanContent}</div></body></html>`;
   // Log HTML size for debugging
   const htmlSize = new Blob([
     html
@@ -276,7 +276,7 @@ serve(async (req)=>{
       console.log('⚠️ Demo user rate limit reached, but allowing for testing');
     }
          // Parse request body (same format as extension sends)
-     const { jobDescription, resumeId, userId, currentResume, fullExperience, resumeName, tabTitle } = await req.json();
+     const { jobDescription, resumeId, userId, userPitch, fullExperience, resumeName, tabTitle } = await req.json(); // REFACTORED: Changed from currentResume to userPitch
     if (!jobDescription) {
       return new Response(JSON.stringify({
         error: 'Job description is required'
@@ -288,35 +288,35 @@ serve(async (req)=>{
         }
       });
     }
-    // Prepare the prompt for OpenAI to generate structured content
-    const systemPrompt = `Create professional resume and cover letter in HTML format.
+         // Prepare the prompt for OpenAI to generate structured content
+     const systemPrompt = `Create professional resume and cover letter in HTML format.
 
-Principles: Lead with results, be concise, round DOWN numbers, organize skills, trim irrelevant roles.
+ Principles: Lead with results, be concise, round DOWN numbers, organize skills, intelligently select relevant experience.
 
-BUZZWORD INTELLIGENCE: Find creative similarities between your experience and job requirements across ALL industries:
-- Analyze your actual experience and identify transferable skills/roles that match job requirements
-- Be creative but truthful: "Trash collection" → "Logistics coordination" (route planning, time management)
-- Adapt role titles to industry terminology: "Waiter" → "Customer Service Representative" (same core skills)
-- Map related technologies: "JavaScript" → "TypeScript (very similar)" when job requires TypeScript
-- Highlight transferable skills: "Food service" → "Team coordination, customer relations, inventory management"
-- Only make connections when genuinely similar - never fabricate experience
-- Always mention the similarity: "Experience in [your skill] (very similar to [job requirement])"
+ EXPERIENCE SELECTION STRATEGY: // REFACTORED: New strategy for intelligent job selection
+ - Select exactly 3 most relevant job experiences from the full experience list
+ - Choose jobs that best match the job requirements and user's pitch
+ - Compress all other experiences into "Additional Experience" section as one-liners
+ - Format: "Company Name - Job Title (Date Range)" for compressed entries
+ - Never include more than 3 detailed job sections in "Relevant Experience"
 
-Resume Template:
-<!DOCTYPE html><html><head><style>body{font-family:'Times New Roman',Times,serif;margin:40px;color:#000}.name{font-size:21pt;font-weight:bold;font-style:italic;text-align:center;margin-bottom:5px}.contact{font-size:8pt;text-align:center;margin-bottom:20px}h2{font-size:14pt;font-weight:bold;margin-top:20px;margin-bottom:10px}.education,.experience,.additional{font-size:12pt}.experience-entry{margin-bottom:15px}.company-line{display:flex;justify-content:space-between;font-size:12pt;font-weight:bold}.company-type-line{display:flex;justify-content:space-between;font-size:10pt;font-weight:bold}.job-title{font-size:11pt;font-weight:bold;margin-top:3px;margin-bottom:3px}ul{padding-left:20px;margin:5px 0}ul li{list-style-type:"- ";font-size:9pt;margin-bottom:3px}.skills-header{font-size:7pt;font-weight:bold;margin-top:10px}.skills{font-size:7pt}@media print{body{margin:20mm;color:#000;background:#fff}a{color:#000;text-decoration:none}}</style></head><body><div class="name">[CANDIDATE NAME]</div><div class="contact">[PHONE] - [EMAIL] - [LINKEDIN] - [PORTFOLIO]</div><h2>Education</h2><div class="education">[DEGREE] in [FIELD]<br>[UNIVERSITY] — [YEAR RANGE]</div><h2>Relevant Experience</h2><div class="experience"><div class="experience-entry"><div class="company-line"><div>[COMPANY NAME]</div><div>[LOCATION]</div></div><div class="company-type-line"><div>[COMPANY TYPE/INDUSTRY]</div><div>[DATE RANGE]</div></div><div class="job-title">[JOB TITLE]</div><ul><li>[KEY ACHIEVEMENT]</li><li>[KEY ACHIEVEMENT]</li><li>[KEY ACHIEVEMENT]</li></ul></div></div><h2>Additional</h2><div class="skills-header">Skills</div><div class="skills">[TECHNICAL SKILLS], [OPERATIONAL SKILLS], [SOFT SKILLS]</div></body></html>
+ BUZZWORD INTELLIGENCE: Find creative similarities between your experience and job requirements across ALL industries:
+ - Analyze your actual experience and identify transferable skills/roles that match job requirements
+ - Be creative but truthful: "Trash collection" → "Logistics coordination" (route planning, time management)
+ - Adapt role titles to industry terminology: "Waiter" → "Customer Service Representative" (same core skills)
+ - Map related technologies: "JavaScript" → "TypeScript (very similar)" when job requires TypeScript
+ - Highlight transferable skills: "Food service" → "Team coordination, customer relations, inventory management"
+ - Only make connections when genuinely similar - never fabricate experience
+ - Always mention the similarity: "Experience in [your skill] (very similar to [job requirement])"
 
-Cover Letter Template:
-<div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
-  <div style="margin-bottom: 20px;">[TODAY'S DATE]</div>
-  
-  <div style="margin-bottom: 20px;">
-    [RECIPIENT NAME]<br>
-    [COMPANY NAME]<br>
-    [ADDRESS LINE 1]<br>
-    [ADDRESS LINE 2]
-  </div>
-  
-  <div style="margin-bottom: 20px;">Dear [RECIPIENT NAME],</div>
+ Resume Template:
+ <!DOCTYPE html><html><head><style>body{font-family:'Times New Roman',Times,serif;margin:40px;color:#000}.name{font-size:21pt;font-weight:bold;font-style:italic;text-align:center;margin-bottom:5px}.contact{font-size:8pt;text-align:center;margin-bottom:20px}h2{font-size:14pt;font-weight:bold;margin-top:20px;margin-bottom:10px}.education,.experience,.additional{font-size:12pt}.experience-entry{margin-bottom:15px}.company-line{display:flex;justify-content:space-between;font-size:12pt;font-weight:bold}.company-type-line{display:flex;justify-content:space-between;font-size:10pt;font-weight:bold}.job-title{font-size:11pt;font-weight:bold;margin-top:3px;margin-bottom:3px}ul{padding-left:20px;margin:5px 0}ul li{list-style-type:"- ";font-size:9pt;margin-bottom:3px}.skills-header{font-size:7pt;font-weight:bold;margin-top:10px}.skills{font-size:7pt}@media print{body{margin:20mm;color:#000;background:#fff}a{color:#000;text-decoration:none}}</style></head><body><div class="name">[CANDIDATE NAME]</div><div class="contact">[PHONE] - [EMAIL] - [LINKEDIN] - [PORTFOLIO]</div><h2>Education</h2><div class="education">[DEGREE] in [FIELD]<br>[UNIVERSITY] — [YEAR RANGE]</div><h2>Relevant Experience</h2><div class="experience"><div class="experience-entry"><div class="company-line"><div>[COMPANY NAME]</div><div>[LOCATION]</div></div><div class="company-type-line"><div>[COMPANY TYPE/INDUSTRY]</div><div>[DATE RANGE]</div></div><div class="job-title">[JOB TITLE]</div><ul><li>[KEY ACHIEVEMENT]</li><li>[KEY ACHIEVEMENT]</li><li>[KEY ACHIEVEMENT]</li></ul></div></div><h2>Additional Experience</h2><div class="additional">[COMPRESSED ONE-LINE EXPERIENCES: Company - Job Title (Date Range)]</div><h2>Additional</h2><div class="skills-header">Skills</div><div class="skills">[TECHNICAL SKILLS], [OPERATIONAL SKILLS], [SOFT SKILLS]</div></body></html>
+
+ Cover Letter Template:
+ <div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
+   <div style="margin-bottom: 20px;">[TODAY'S DATE]</div>
+   
+   <div style="margin-bottom: 20px;">Dear [RECIPIENT NAME],</div>
   
   <div style="margin-bottom: 15px;">
     [OPENING PARAGRAPH - Strong hook connecting experience to role]
@@ -336,11 +336,12 @@ Cover Letter Template:
   </div>
 </div>
 
-Cover Letter: Create compelling, personalized cover letter using the template above:
-- Replace all bracketed placeholders with actual content
-- Use buzzword intelligence to highlight relevant transferable skills
-- Keep it concise and professional
-- No decorative elements or fancy styling
+ Cover Letter: Create compelling, personalized cover letter using the template above:
+ - Replace all bracketed placeholders with actual content
+ - Use the user's pitch to understand their personal story and value proposition
+ - Use buzzword intelligence to highlight relevant transferable skills
+ - Keep it concise and professional
+ - No decorative elements or fancy styling
 
 Format:
 ===RESUME===
@@ -359,16 +360,16 @@ Format:
        day: 'numeric' 
      });
 
-     const userPrompt = `Create resume and cover letter for:
+           const userPrompt = `Create resume and cover letter for:
 
-JOB: ${jobDescription}
+ JOB: ${jobDescription}
 
-RESUME: ${currentResume || 'No resume provided'}
+ USER PITCH: ${userPitch || 'No pitch provided'} // REFACTORED: Changed from RESUME to USER PITCH - this is now the user's personal story/pitch
 
-EXPERIENCE: ${fullExperience || 'No details provided'}
+ EXPERIENCE: ${fullExperience || 'No details provided'}
 
-TODAY'S DATE: ${formattedDate}
-`;
+ TODAY'S DATE: ${formattedDate}
+ `;
     // Call OpenAI API (same as extension)
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

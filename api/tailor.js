@@ -18,7 +18,7 @@ async function handler(req, res) {
   }
 
   try {
-    const { jobDescription, resumeId, userId, currentResume, fullExperience, resumeName } = req.body;
+    const { jobDescription, resumeId, userId, userPitch, fullExperience, resumeName } = req.body; // REFACTORED: Changed from currentResume to userPitch
 
     if (!jobDescription) {
       return res.status(400).json({ error: 'Job description is required' });
@@ -142,8 +142,8 @@ Be specific, actionable, and professional. Use the template structure above as a
 JOB DESCRIPTION:
 ${jobDescription}
 
-CURRENT RESUME CONTENT:
-${currentResume || 'No current resume provided'}
+  USER PITCH: // REFACTORED: Changed from CURRENT RESUME CONTENT to USER PITCH
+    ${userPitch || 'No pitch provided'} // REFACTORED: Changed from currentResume to userPitch
 
 FULL EXPERIENCE DETAILS:
 ${fullExperience || 'No experience details provided'}

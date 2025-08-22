@@ -566,10 +566,10 @@ async function loadSelectedResumeContent() {
     
     const selectedResume = resumes.find(r => r.id === selectedId);
     if (selectedResume) {
-        // Update the resume content display area
+        // Update the user pitch display area
         const resumeContentArea = document.getElementById('resumeContent');
         if (resumeContentArea) {
-            resumeContentArea.value = selectedResume.content || '';
+            resumeContentArea.value = selectedResume.content || ''; // REFACTORED: This now contains the user's pitch
         }
         
         // Update experience area
@@ -580,9 +580,9 @@ async function loadSelectedResumeContent() {
     }
 }
 
-async function saveCurrentResume() {
+async function saveCurrentResume() { // REFACTORED: Function name kept for compatibility, but now saves user pitch
     const selectedId = document.getElementById('resumeSelect').value;
-    const resumeContent = document.getElementById('resumeContent').value;
+    const userPitch = document.getElementById('resumeContent').value; // REFACTORED: Variable renamed to reflect new purpose
     const experienceContent = document.getElementById('experienceContent').value;
     
     const result = await chrome.storage.local.get(['userResumes']);
@@ -590,7 +590,7 @@ async function saveCurrentResume() {
     
     const resumeIndex = resumes.findIndex(r => r.id === selectedId);
     if (resumeIndex !== -1) {
-        resumes[resumeIndex].content = resumeContent;
+        resumes[resumeIndex].content = userPitch; // REFACTORED: Now saves the user's pitch
         resumes[resumeIndex].experience = experienceContent;
         resumes[resumeIndex].lastUpdated = new Date().toISOString();
         
@@ -598,7 +598,7 @@ async function saveCurrentResume() {
         
         // Show success message
         const outputElement = document.getElementById('output');
-        outputElement.innerText = '✅ Resume saved successfully!';
+        outputElement.innerText = '✅ Resume and pitch saved successfully!'; // REFACTORED: Updated message to reflect new purpose
         setTimeout(() => {
             outputElement.innerText = '';
         }, 2000);
@@ -616,8 +616,8 @@ function showResumeManager() {
         </div>
         
         <div class="resume-manager-section">
-            <label for="resumeContent"><strong>Current Resume Content:</strong></label>
-            <textarea id="resumeContent" name="resumeContent" placeholder="Paste your current resume here..."></textarea>
+            <label for="resumeContent"><strong>🎯 Make Your Pitch:</strong></label>
+            <textarea id="resumeContent" name="resumeContent" placeholder="Tell us how you want to be presented to employers. What makes you unique? What value can you bring? What's your professional story? This helps AI tailor your experience to match the job..."></textarea>
         </div>
         
         <div class="resume-manager-section">
@@ -633,11 +633,11 @@ function showResumeManager() {
         </div>
         
         <div class="resume-manager-tip">
-            💡 <strong>Tip:</strong> The more detailed your experience section, the better GPT can tailor your resume to specific job descriptions!
+            💡 <strong>Tip:</strong> Your pitch helps AI understand your story and value proposition. The more detailed your experience section, the better GPT can select the most relevant jobs and tailor your resume!
         </div>
     `;
     
-    // Load current resume content
+    // Load current user pitch
     loadSelectedResumeContent();
     
     // Add event listeners for dynamically created buttons
@@ -651,28 +651,28 @@ function clearResumeManager() {
     outputElement.innerHTML = '';
 }
 
-function previewCurrentResume() {
-    const resumeContent = document.getElementById('resumeContent').value;
+function previewCurrentResume() { // REFACTORED: Function name kept for compatibility, but now previews user pitch
+    const userPitch = document.getElementById('resumeContent').value; // REFACTORED: Variable renamed to reflect new purpose
     const experienceContent = document.getElementById('experienceContent').value;
     const selectedId = document.getElementById('resumeSelect').value;
     
-    if (!resumeContent.trim() && !experienceContent.trim()) {
-        alert('No content to preview. Please add some resume content first.');
+    if (!userPitch.trim() && !experienceContent.trim()) {
+        alert('No content to preview. Please add some pitch or experience content first.'); // REFACTORED: Updated message to reflect new purpose
         return;
     }
     
     const outputElement = document.getElementById('output');
     outputElement.innerHTML = `
         <div class="preview-header">
-            <h3>👁️ Resume Preview</h3>
+            <h3>👁️ Resume & Pitch Preview</h3> // REFACTORED: Updated header to reflect new purpose
             <p>Selected Resume: ${getResumeNameById(selectedId)}</p>
         </div>
         
-        ${resumeContent ? `
+        ${userPitch ? `
         <div class="preview-section">
-            <h4>📄 Current Resume Content:</h4>
+            <h4>🎯 Your Pitch:</h4>
             <div class="preview-content">
-                ${resumeContent}
+                ${userPitch}
             </div>
         </div>
         ` : ''}
@@ -711,7 +711,7 @@ function viewAllResumes() {
         let html = `
             <div class="resume-list-header">
                 <h3>📋 All Saved Resumes</h3>
-                <p>Click on any resume to view its content</p>
+                <p>Click on any resume to view its pitch and experience</p> // REFACTORED: Updated text to reflect new purpose
             </div>
         `;
         
@@ -766,7 +766,7 @@ function viewSpecificResume(resumeId) {
         if (resume.content) {
             html += `
                 <div class="resume-detail-section">
-                    <h4>📄 Resume Content:</h4>
+                    <h4>🎯 User Pitch:</h4> // REFACTORED: Updated header to reflect new purpose
                     <div class="resume-detail-content">
                         ${resume.content}
                     </div>
@@ -788,7 +788,7 @@ function viewSpecificResume(resumeId) {
         if (!resume.content && !resume.experience) {
             html += `
                 <div class="resume-empty-message">
-                    <p>❌ This resume has no content saved yet.</p>
+                    <p>❌ This resume has no pitch or experience saved yet.</p> // REFACTORED: Updated text to reflect new purpose
                 </div>
             `;
         }
@@ -840,13 +840,13 @@ function processLoadedResume(file) {
             // Get the currently selected resume slot
             const currentSlotId = document.getElementById('resumeSelect').value;
             
-            // Save the resume content to the current slot
+            // Save the user pitch to the current slot
             const result = await chrome.storage.local.get(['userResumes']);
             const resumes = result.userResumes || [];
             
             const resumeIndex = resumes.findIndex(r => r.id === currentSlotId);
             if (resumeIndex !== -1) {
-                resumes[resumeIndex].content = resumeContent;
+                resumes[resumeIndex].content = resumeContent; // REFACTORED: This now contains the user's pitch
                 resumes[resumeIndex].lastUpdated = new Date().toISOString();
                 resumes[resumeIndex].loadedFrom = file.name;
                 
@@ -856,7 +856,7 @@ function processLoadedResume(file) {
                 const outputElement = document.getElementById('output');
                 outputElement.innerHTML = `
                     <div class="success-message">
-                        <p>✅ Resume loaded successfully!</p>
+                        <p>✅ Resume and pitch loaded successfully!</p> // REFACTORED: Updated message to reflect new purpose
                         <p>File: ${file.name}<br>
                         Slot: ${getResumeNameById(currentSlotId)}<br>
                         Content length: ${resumeContent.length} characters</p>
@@ -1016,7 +1016,7 @@ async function handleGenerate() {
         return;
     }
     
-    // Get the selected resume content
+    // Get the selected user pitch
     const result = await chrome.storage.local.get(['userResumes']);
     const resumes = result.userResumes || [];
     const selectedResume = resumes.find(r => r.id === selectedResumeId);
@@ -1063,7 +1063,7 @@ async function handleGenerate() {
     // Log the plaintext content being sent to OpenAI
     console.log('=== PLAINTEXT CONTENT FOR OPENAI ===');
     console.log('📄 Job Description:', jobDescription);
-    console.log('📋 Current Resume Content:', selectedResume.content);
+    console.log('🎯 User Pitch:', selectedResume.content); // REFACTORED: Updated log message to reflect new purpose
     console.log('📋 Full Experience Details:', selectedResume.experience);
     console.log('📂 Resume Name:', selectedResume.name);
     console.log('🆔 Resume ID:', selectedResumeId);
@@ -1078,7 +1078,7 @@ async function handleGenerate() {
         jobDescription,
         resumeId: selectedResumeId,
         userId: 'demo-user',
-        currentResume: selectedResume.content,
+        userPitch: selectedResume.content, // REFACTORED: Changed from currentResume to userPitch - this is now the user's personal pitch/story
         fullExperience: selectedResume.experience,
         resumeName: selectedResume.name,
         tabTitle
@@ -1088,7 +1088,7 @@ async function handleGenerate() {
     console.log('📦 API Package:', JSON.stringify(openAIPackage, null, 2));
     console.log('📊 Package Size:', JSON.stringify(openAIPackage).length, 'characters');
     console.log('📊 Job Description Length:', jobDescription.length, 'characters');
-    console.log('📊 Resume Content Length:', selectedResume.content ? selectedResume.content.length : 0, 'characters');
+    console.log('📊 User Pitch Length:', selectedResume.content ? selectedResume.content.length : 0, 'characters'); // REFACTORED: Updated log message to reflect new purpose
     console.log('📊 Experience Details Length:', selectedResume.experience ? selectedResume.experience.length : 0, 'characters');
     console.log('=== END OF OPENAI PACKAGE ===');
     
@@ -1413,7 +1413,7 @@ function updateButtonStates() {
         const hasResumePDF = !!result.resumePDF;
         const hasCoverPDF = !!result.coverLetterPDF;
         
-        // Check if we have any resume content (either clean content or PDF)
+        // Check if we have any user pitch (either clean content or PDF)
         const hasResume = hasResumeContent || hasResumePDF;
         // Check if we have any cover letter content (either clean content or PDF)
         const hasCover = hasCoverContent || hasCoverPDF;
@@ -1737,7 +1737,7 @@ async function handleGenerateInternal() {
     
     console.log('Job description found in handleGenerateInternal, getting resume data...');
     
-    // Get the selected resume content
+    // Get the selected user pitch
     const result = await chrome.storage.local.get(['userResumes']);
     const resumes = result.userResumes || [];
     const selectedResume = resumes.find(r => r.id === selectedResumeId);
@@ -1756,7 +1756,7 @@ async function handleGenerateInternal() {
     // Log the plaintext content being sent to OpenAI
     console.log('=== PLAINTEXT CONTENT FOR OPENAI ===');
     console.log('📄 Job Description:', jobDescription);
-    console.log('📋 Current Resume Content:', selectedResume.content);
+    console.log('🎯 User Pitch:', selectedResume.content); // REFACTORED: Updated log message to reflect new purpose
     console.log('📋 Full Experience Details:', selectedResume.experience);
     console.log('📂 Resume Name:', selectedResume.name);
     console.log('🆔 Resume ID:', selectedResumeId);
@@ -1767,7 +1767,7 @@ async function handleGenerateInternal() {
         jobDescription,
         resumeId: selectedResumeId,
         userId: 'demo-user',
-        currentResume: selectedResume.content,
+        userPitch: selectedResume.content, // REFACTORED: Changed from currentResume to userPitch - this is now the user's personal pitch/story
         fullExperience: selectedResume.experience,
         resumeName: selectedResume.name
     };
@@ -1776,7 +1776,7 @@ async function handleGenerateInternal() {
     console.log('📦 API Package:', JSON.stringify(openAIPackage, null, 2));
     console.log('📊 Package Size:', JSON.stringify(openAIPackage).length, 'characters');
     console.log('📊 Job Description Length:', jobDescription.length, 'characters');
-    console.log('📊 Resume Content Length:', selectedResume.content ? selectedResume.content.length : 0, 'characters');
+    console.log('📊 User Pitch Length:', selectedResume.content ? selectedResume.content.length : 0, 'characters'); // REFACTORED: Updated log message to reflect new purpose
     console.log('📊 Experience Details Length:', selectedResume.experience ? selectedResume.experience.length : 0, 'characters');
     console.log('=== END OF OPENAI PACKAGE ===');
     
