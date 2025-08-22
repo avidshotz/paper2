@@ -125,6 +125,10 @@ async function initAuth() {
         });
         
         console.log('✅ Authentication initialization complete');
+        
+        // Check for existing PDFs and update download button state
+        checkExistingPDFs();
+        
     } catch (error) {
         console.error('❌ Failed to initialize authentication:', error);
     }
@@ -956,6 +960,7 @@ async function extractJobFromCurrentPage() {
             console.log('✅ Job description extracted successfully');
             console.log('📄 Job text length:', results.jobText.length);
             console.log('📄 Job text preview:', results.jobText.substring(0, 200) + '...');
+            console.log('📄 Tab title:', results.tabTitle || 'No title');
             
             // Update the job description textarea
             const jobDescTextarea = document.getElementById('jobDesc');
@@ -967,8 +972,11 @@ async function extractJobFromCurrentPage() {
             }
             
             // Save to storage
-            await chrome.storage.local.set({ jobText: results.jobText });
-            console.log('✅ Saved job text to storage');
+            await chrome.storage.local.set({ 
+                jobText: results.jobText,
+                tabTitle: results.tabTitle || 'Job Posting'
+            });
+            console.log('✅ Saved job text and tab title to storage');
             
             outputElement.innerText = `✅ Job description extracted successfully!\n\nLength: ${results.jobText.length} characters\n\nYou can now generate tailored recommendations.`;
             
@@ -1061,6 +1069,10 @@ async function handleGenerate() {
     console.log('🆔 Resume ID:', selectedResumeId);
     console.log('👤 User ID:', 'demo-user');
     
+    // Get tab title from storage
+    const storageResult = await chrome.storage.local.get(['tabTitle']);
+    const tabTitle = storageResult.tabTitle || 'Job Posting';
+    
     // Create the complete package being sent to OpenAI API
     const openAIPackage = {
         jobDescription,
@@ -1068,7 +1080,8 @@ async function handleGenerate() {
         userId: 'demo-user',
         currentResume: selectedResume.content,
         fullExperience: selectedResume.experience,
-        resumeName: selectedResume.name
+        resumeName: selectedResume.name,
+        tabTitle
     };
     
     console.log('=== COMPLETE PACKAGE SENT TO OPENAI API ===');
@@ -1282,23 +1295,17 @@ async function saveGeneratedPDFs(pdfData, jobDescription, resumeId) {
         hasCoverLetterContent: !!pdfData.coverLetterContent
     });
     
-    // Save PDF data
-    await chrome.storage.local.set({
-        resumePDF: pdfData.resumePDF,
-        coverLetterPDF: pdfData.coverLetterPDF,
-        resumeFileName: pdfData.resumeFileName,
-        coverLetterFileName: pdfData.coverLetterFileName,
-        resumeContent: pdfData.resumeContent,
-        coverLetterContent: pdfData.coverLetterContent,
+    // Use the new managePDFStorage function to handle PDF storage and history
+    await managePDFStorage({
+        ...pdfData,
         lastGenerated: timestamp,
         lastJobDescription: jobDescription,
-        lastResumeId: resumeId,
-        hasPDFs: true
+        lastResumeId: resumeId
     });
     
     console.log('PDF data saved successfully to storage');
     
-    // Add to history
+    // Add to resume history (separate from PDF history)
     const result = await chrome.storage.local.get(['resumeHistory']);
     const history = result.resumeHistory || [];
     
@@ -1333,12 +1340,17 @@ function updateOutputDisplay(type, content) {
                 <p>Your tailored resume and cover letter are ready for download.</p>
                 
                 <div class="pdf-downloads">
-                    <button id="downloadResumeBtn" class="btn btn-success">
-                        📄 Download Resume (${content.resumeFileName})
+                    <button id="downloadBothBtn" class="btn btn-success" disabled>
+                        📥 Download Both PDFs
                     </button>
-                    <button id="downloadCoverBtn" class="btn btn-primary">
-                        ✉️ Download Cover Letter (${content.coverLetterFileName})
-                    </button>
+                    <div class="individual-downloads" style="margin-top: 10px;">
+                        <button id="downloadResumeBtn" class="btn btn-secondary" style="width: 48%; margin-right: 2%;">
+                            📄 Resume
+                        </button>
+                        <button id="downloadCoverBtn" class="btn btn-secondary" style="width: 48%; margin-left: 2%;">
+                            ✉️ Cover Letter
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="pdf-preview">
@@ -1351,9 +1363,22 @@ function updateOutputDisplay(type, content) {
             </div>
         `;
         
-        // Add event listeners to the download buttons
-        document.getElementById('downloadResumeBtn').addEventListener('click', () => downloadPDF('resume'));
-        document.getElementById('downloadCoverBtn').addEventListener('click', () => downloadPDF('cover'));
+        // Use event delegation to handle button clicks
+        const pdfDownloadsContainer = document.querySelector('.pdf-downloads');
+        if (pdfDownloadsContainer) {
+            pdfDownloadsContainer.addEventListener('click', (event) => {
+                if (event.target.id === 'downloadBothBtn') {
+                    downloadBothPDFs();
+                } else if (event.target.id === 'downloadResumeBtn') {
+                    downloadPDF('resume');
+                } else if (event.target.id === 'downloadCoverBtn') {
+                    downloadPDF('cover');
+                }
+            });
+        }
+        
+        // Enable the combined download button if both PDFs are ready
+        updateDownloadButtonState();
     }
 }
 
@@ -1486,6 +1511,185 @@ function downloadPDF(type) {
         } else {
             console.error('PDF data not found for type:', type);
             alert('PDF data not found. Please generate the documents again.');
+        }
+    });
+}
+
+// Function to download both PDFs at once
+async function downloadBothPDFs() {
+    console.log('downloadBothPDFs called');
+    
+    try {
+        const result = await chrome.storage.local.get(['resumePDF', 'coverLetterPDF', 'resumeFileName', 'coverLetterFileName']);
+        
+        if (!result.resumePDF || !result.coverLetterPDF) {
+            alert('Both PDFs are not ready yet. Please wait for generation to complete.');
+            return;
+        }
+        
+        // Download resume first
+        await downloadSinglePDF('resume', result.resumePDF, result.resumeFileName);
+        
+        // Small delay to ensure first download starts
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Download cover letter
+        await downloadSinglePDF('cover', result.coverLetterPDF, result.coverLetterFileName);
+        
+        console.log('Both PDFs downloaded successfully');
+        
+    } catch (error) {
+        console.error('Error downloading both PDFs:', error);
+        alert('Error downloading PDFs. Please try again.');
+    }
+}
+
+// Helper function to download a single PDF
+async function downloadSinglePDF(type, pdfData, fileName) {
+    if (!pdfData) {
+        console.error(`PDF data not found for ${type}`);
+        return;
+    }
+    
+    // Fix filename extension to be .pdf
+    if (fileName && fileName.endsWith('.html')) {
+        fileName = fileName.replace('.html', '.pdf');
+    }
+    
+    const finalFileName = fileName || `${type === 'resume' ? 'resume' : 'cover-letter'}.pdf`;
+    
+    try {
+        // Check if this is base64 PDF data or HTML
+        if (pdfData.startsWith('<!DOCTYPE html') || pdfData.startsWith('<html')) {
+            // This is HTML (fallback case), download as HTML
+            const blob = new Blob([pdfData], { type: 'text/html; charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalFileName.replace('.pdf', '.html');
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log(`Downloaded ${type} as HTML (fallback):`, finalFileName);
+        } else {
+            // This should be base64 PDF data
+            const byteCharacters = atob(pdfData);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalFileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log(`Downloaded ${type} as PDF:`, finalFileName);
+        }
+    } catch (error) {
+        console.error(`Error processing ${type} PDF data:`, error);
+        // Fallback to treating as HTML
+        const blob = new Blob([pdfData], { type: 'text/html; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalFileName.replace('.pdf', '.html');
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        console.log(`Downloaded ${type} as HTML (error fallback):`, finalFileName);
+    }
+}
+
+// Function to update download button state
+function updateDownloadButtonState() {
+    chrome.storage.local.get(['resumePDF', 'coverLetterPDF'], (result) => {
+        const downloadBothBtn = document.getElementById('downloadBothBtn');
+        if (downloadBothBtn) {
+            const bothReady = !!result.resumePDF && !!result.coverLetterPDF;
+            downloadBothBtn.disabled = !bothReady;
+            downloadBothBtn.textContent = bothReady ? '📥 Download Both PDFs' : '⏳ PDFs Not Ready';
+        }
+    });
+}
+
+// Function to manage local storage for PDFs (keep last 2 sets)
+async function managePDFStorage(newPDFData) {
+    try {
+        // Get current PDF history
+        const result = await chrome.storage.local.get(['pdfHistory']);
+        let pdfHistory = result.pdfHistory || [];
+        
+        // Add new PDF data to history
+        const newEntry = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            ...newPDFData
+        };
+        
+        pdfHistory.unshift(newEntry); // Add to beginning
+        
+        // Keep only the last 2 entries
+        if (pdfHistory.length > 2) {
+            pdfHistory = pdfHistory.slice(0, 2);
+        }
+        
+        // Save updated history
+        await chrome.storage.local.set({ pdfHistory });
+        
+        // Also save current PDFs as the active set
+        await chrome.storage.local.set({
+            resumePDF: newPDFData.resumePDF,
+            coverLetterPDF: newPDFData.coverLetterPDF,
+            resumeFileName: newPDFData.resumeFileName,
+            coverLetterFileName: newPDFData.coverLetterFileName,
+            resumeContent: newPDFData.resumeContent,
+            coverLetterContent: newPDFData.coverLetterContent,
+            hasPDFs: true
+        });
+        
+        console.log('PDF storage managed successfully. History entries:', pdfHistory.length);
+        
+    } catch (error) {
+        console.error('Error managing PDF storage:', error);
+    }
+}
+
+// Function to check for existing PDFs and show download option if available
+function checkExistingPDFs() {
+    chrome.storage.local.get(['resumePDF', 'coverLetterPDF', 'resumeFileName', 'coverLetterFileName'], (result) => {
+        const hasResumePDF = !!result.resumePDF;
+        const hasCoverPDF = !!result.coverLetterPDF;
+        
+        if (hasResumePDF || hasCoverPDF) {
+            console.log('Found existing PDFs, updating download button state');
+            
+            // Just update the button states if buttons exist
+            const downloadBothBtn = document.getElementById('downloadBothBtn');
+            const downloadResumeBtn = document.getElementById('downloadResumeBtn');
+            const downloadCoverBtn = document.getElementById('downloadCoverBtn');
+            
+            if (downloadBothBtn) {
+                const bothReady = hasResumePDF && hasCoverPDF;
+                downloadBothBtn.disabled = !bothReady;
+                downloadBothBtn.textContent = bothReady ? '📥 Download Both PDFs' : '⏳ PDFs Not Ready';
+            }
+            
+            if (downloadResumeBtn) {
+                downloadResumeBtn.disabled = !hasResumePDF;
+                downloadResumeBtn.textContent = `📄 Resume ${hasResumePDF ? `(${result.resumeFileName || 'resume.pdf'})` : '(Not Ready)'}`;
+            }
+            
+            if (downloadCoverBtn) {
+                downloadCoverBtn.disabled = !hasCoverPDF;
+                downloadCoverBtn.textContent = `✉️ Cover Letter ${hasCoverPDF ? `(${result.coverLetterFileName || 'cover-letter.pdf'})` : '(Not Ready)'}`;
+            }
         }
     });
 }

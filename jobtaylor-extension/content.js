@@ -896,7 +896,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         
         if (jobText) {
             console.log('✅ Sending job text back to popup');
-        sendResponse({ jobText });
+            const tabTitle = document.title || 'Job Posting';
+            sendResponse({ jobText, tabTitle });
         } else {
             console.log('❌ No job text found, sending empty response');
             sendResponse({ jobText: null, error: 'No job description found on this page. Please make sure you\'re looking at a job posting.' });

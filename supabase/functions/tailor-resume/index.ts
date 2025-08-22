@@ -275,8 +275,8 @@ serve(async (req)=>{
     } else if (!rateLimitCheck.allowed) {
       console.log('⚠️ Demo user rate limit reached, but allowing for testing');
     }
-    // Parse request body (same format as extension sends)
-    const { jobDescription, resumeId, userId, currentResume, fullExperience, resumeName } = await req.json();
+         // Parse request body (same format as extension sends)
+     const { jobDescription, resumeId, userId, currentResume, fullExperience, resumeName, tabTitle } = await req.json();
     if (!jobDescription) {
       return new Response(JSON.stringify({
         error: 'Job description is required'
@@ -289,201 +289,86 @@ serve(async (req)=>{
       });
     }
     // Prepare the prompt for OpenAI to generate structured content
-    const systemPrompt = `You are an expert resume and cover letter writer. Your task is to analyze a job description and create TWO professional documents in HTML format.
+    const systemPrompt = `Create professional resume and cover letter in HTML format.
 
-Most resumes read like job logs — but the best ones read like stories of impact. If you want yours to stand out, keep these rules in mind:
+Principles: Lead with results, be concise, round DOWN numbers, organize skills, trim irrelevant roles.
 
-Lead with results, not duties. Swap "responsible for managing schedules" with "streamlined scheduling for 5 teams, cutting delays by 20%."
+BUZZWORD INTELLIGENCE: Find creative similarities between your experience and job requirements across ALL industries:
+- Analyze your actual experience and identify transferable skills/roles that match job requirements
+- Be creative but truthful: "Trash collection" → "Logistics coordination" (route planning, time management)
+- Adapt role titles to industry terminology: "Waiter" → "Customer Service Representative" (same core skills)
+- Map related technologies: "JavaScript" → "TypeScript (very similar)" when job requires TypeScript
+- Highlight transferable skills: "Food service" → "Team coordination, customer relations, inventory management"
+- Only make connections when genuinely similar - never fabricate experience
+- Always mention the similarity: "Experience in [your skill] (very similar to [job requirement])"
 
-Be concise. Recruiters skim in under 10 seconds. Keep bullets to one line and cut fluff like "other duties as assigned."
+Resume Template:
+<!DOCTYPE html><html><head><style>body{font-family:'Times New Roman',Times,serif;margin:40px;color:#000}.name{font-size:21pt;font-weight:bold;font-style:italic;text-align:center;margin-bottom:5px}.contact{font-size:8pt;text-align:center;margin-bottom:20px}h2{font-size:14pt;font-weight:bold;margin-top:20px;margin-bottom:10px}.education,.experience,.additional{font-size:12pt}.experience-entry{margin-bottom:15px}.company-line{display:flex;justify-content:space-between;font-size:12pt;font-weight:bold}.company-type-line{display:flex;justify-content:space-between;font-size:10pt;font-weight:bold}.job-title{font-size:11pt;font-weight:bold;margin-top:3px;margin-bottom:3px}ul{padding-left:20px;margin:5px 0}ul li{list-style-type:"- ";font-size:9pt;margin-bottom:3px}.skills-header{font-size:7pt;font-weight:bold;margin-top:10px}.skills{font-size:7pt}@media print{body{margin:20mm;color:#000;background:#fff}a{color:#000;text-decoration:none}}</style></head><body><div class="name">[CANDIDATE NAME]</div><div class="contact">[PHONE] - [EMAIL] - [LINKEDIN] - [PORTFOLIO]</div><h2>Education</h2><div class="education">[DEGREE] in [FIELD]<br>[UNIVERSITY] — [YEAR RANGE]</div><h2>Relevant Experience</h2><div class="experience"><div class="experience-entry"><div class="company-line"><div>[COMPANY NAME]</div><div>[LOCATION]</div></div><div class="company-type-line"><div>[COMPANY TYPE/INDUSTRY]</div><div>[DATE RANGE]</div></div><div class="job-title">[JOB TITLE]</div><ul><li>[KEY ACHIEVEMENT]</li><li>[KEY ACHIEVEMENT]</li><li>[KEY ACHIEVEMENT]</li></ul></div></div><h2>Additional</h2><div class="skills-header">Skills</div><div class="skills">[TECHNICAL SKILLS], [OPERATIONAL SKILLS], [SOFT SKILLS]</div></body></html>
 
-Quantify everything. Numbers give proof: customers served, revenue increased, events managed, downtime reduced.
-
-Organize skills clearly. Break them into buckets (Technical, Operations, Soft Skills) so strengths jump out.
-
-Trim irrelevant roles. If a job isn't building your case, shorten or group it. One page is ideal unless you're senior-level.
-
-Polish education. Even unfinished coursework adds credibility if phrased cleanly ("Computer Science coursework, 2018–2020" vs "no degree").
-
-In short: show what you achieved, not just what you did. That's what turns a resume from a timeline into a pitch.
-
-Use this professional, traditional resume template as a reference for formatting and structure:
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resume Template</title>
-  <style>
-    body {
-      font-family: 'Times New Roman', Times, serif;
-      margin: 40px;
-      color: #000;
-    }
-    .name {
-      font-size: 21pt;
-      font-weight: bold;
-      font-style: italic;
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    .contact {
-      font-size: 8pt;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    h2 {
-      font-size: 14pt;
-      font-weight: bold;
-      margin-top: 20px;
-      margin-bottom: 10px;
-      text-align: left;
-    }
-    .education, .experience, .additional {
-      font-size: 12pt;
-    }
-    .experience-entry {
-      margin-bottom: 15px;
-    }
-    .company-line {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12pt;
-      font-weight: bold;
-    }
-    .company-type-line {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10pt;
-      font-weight: bold;
-    }
-    .job-title {
-      font-size: 11pt;
-      font-weight: bold;
-      margin-top: 3px;
-      margin-bottom: 3px;
-    }
-    ul {
-      padding-left: 20px;
-      margin: 5px 0;
-    }
-    ul li {
-      list-style-type: "- ";
-      font-size: 9pt;
-      margin-bottom: 3px;
-    }
-    .skills-header {
-      font-size: 7pt;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    .skills {
-      font-size: 7pt;
-    }
-
-    /* Print-friendly CSS */
-    @media print {
-      body {
-        margin: 20mm;
-        color: #000;
-        background: #fff;
-      }
-      .resume, .experience-entry, .education, .skills {
-        box-shadow: none;
-      }
-      a {
-        color: #000;
-        text-decoration: none;
-      }
-      ul li {
-        font-size: 9pt;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="name">[CANDIDATE NAME]</div>
-  <div class="contact">[PHONE] - [EMAIL] - [LINKEDIN] - [PORTFOLIO]</div>
-
-  <h2>Education</h2>
-  <div class="education">
-    [DEGREE] in [FIELD]<br>
-    [UNIVERSITY] — [YEAR RANGE]
+Cover Letter Template:
+<div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
+  <div style="margin-bottom: 20px;">[TODAY'S DATE]</div>
+  
+  <div style="margin-bottom: 20px;">
+    [RECIPIENT NAME]<br>
+    [COMPANY NAME]<br>
+    [ADDRESS LINE 1]<br>
+    [ADDRESS LINE 2]
   </div>
-
-  <h2>Relevant Experience</h2>
-  <div class="experience">
-    <div class="experience-entry">
-      <div class="company-line">
-        <div>[COMPANY NAME]</div>
-        <div>[LOCATION]</div>
-      </div>
-      <div class="company-type-line">
-        <div>[COMPANY TYPE/INDUSTRY]</div>
-        <div>[DATE RANGE]</div>
-      </div>
-      <div class="job-title">[JOB TITLE]</div>
-      <ul>
-        <li>[KEY ACHIEVEMENT/RESPONSIBILITY]</li>
-        <li>[KEY ACHIEVEMENT/RESPONSIBILITY]</li>
-        <li>[KEY ACHIEVEMENT/RESPONSIBILITY]</li>
-      </ul>
-    </div>
-
-    <div class="experience-entry">
-      <div class="company-line">
-        <div>[COMPANY NAME]</div>
-        <div>[LOCATION]</div>
-      </div>
-      <div class="company-type-line">
-        <div>[COMPANY TYPE/INDUSTRY]</div>
-        <div>[DATE RANGE]</div>
-      </div>
-      <div class="job-title">[JOB TITLE]</div>
-      <ul>
-        <li>[KEY ACHIEVEMENT/RESPONSIBILITY]</li>
-        <li>[KEY ACHIEVEMENT/RESPONSIBILITY]</li>
-        <li>[KEY ACHIEVEMENT/RESPONSIBILITY]</li>
-      </ul>
-    </div>
-
-    <!-- Additional experience entries can be added here following the same structure -->
+  
+  <div style="margin-bottom: 20px;">Dear [RECIPIENT NAME],</div>
+  
+  <div style="margin-bottom: 15px;">
+    [OPENING PARAGRAPH - Strong hook connecting experience to role]
   </div>
-
-  <h2>Additional</h2>
-  <div class="skills-header">Skills</div>
-  <div class="skills">
-    [TECHNICAL SKILLS], [OPERATIONAL SKILLS], [SOFT SKILLS]
+  
+  <div style="margin-bottom: 15px;">
+    [BODY PARAGRAPH - Use buzzword intelligence to highlight relevant skills]
   </div>
-</body>
-</html>
+  
+  <div style="margin-bottom: 15px;">
+    [CLOSING PARAGRAPH - Confident call-to-action]
+  </div>
+  
+  <div style="margin-top: 30px;">
+    Sincerely,<br>
+    [YOUR NAME]
+  </div>
+</div>
 
-Please provide your response in this EXACT format:
+Cover Letter: Create compelling, personalized cover letter using the template above:
+- Replace all bracketed placeholders with actual content
+- Use buzzword intelligence to highlight relevant transferable skills
+- Keep it concise and professional
+- No decorative elements or fancy styling
 
+Format:
 ===RESUME===
-[Professional resume content here using the template structure above - this will be converted to HTML]
+[Resume content using template]
 ===END_RESUME===
 
 ===COVER_LETTER===
-[Professional cover letter content here - this will be converted to HTML]
-===END_COVER_LETTER===
+[Professional cover letter using the template above with all placeholders replaced with actual content]
+===END_COVER_LETTER===`;
+         // Get today's date in proper format
+     const today = new Date();
+     const formattedDate = today.toLocaleDateString('en-US', { 
+       weekday: 'long', 
+       year: 'numeric', 
+       month: 'long', 
+       day: 'numeric' 
+     });
 
-Both documents should be properly formatted, professional, and tailored to the specific job description. Use the template structure above as a guide for formatting recommendations. The template supports multiple experience entries and maintains a clean, traditional appearance.`;
-    const userPrompt = `Please analyze this job description and provide a tailored resume and cover letter:
+     const userPrompt = `Create resume and cover letter for:
 
-JOB DESCRIPTION:
-${jobDescription}
+JOB: ${jobDescription}
 
-CURRENT RESUME CONTENT:
-${currentResume || 'No current resume provided'}
+RESUME: ${currentResume || 'No resume provided'}
 
-FULL EXPERIENCE DETAILS:
-${fullExperience || 'No experience details provided'}
+EXPERIENCE: ${fullExperience || 'No details provided'}
 
-RESUME NAME: ${resumeName || 'Unknown'}
-User ID: ${userId || 'demo-user'}
-Resume ID: ${resumeId || 'demo-resume-id'}`;
+TODAY'S DATE: ${formattedDate}
+`;
     // Call OpenAI API (same as extension)
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -592,9 +477,24 @@ Resume ID: ${resumeId || 'demo-resume-id'}`;
       resumeContent: resumeContent?.length || 0,
       coverLetterContent: coverLetterContent?.length || 0
     });
-    // Extract company name from job description for file naming
-    const companyMatch = jobDescription.match(/Company[:\s]+([^\n]+)/i) || jobDescription.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:Consulting|Inc|LLC|Corp|Company)/i);
-    const companyName = companyMatch ? companyMatch[1].trim() : 'Company';
+         // Use tab title for file naming, fallback to company name if no tab title
+     let fileName = 'Job';
+     if (tabTitle && tabTitle !== 'Job Posting') {
+       fileName = tabTitle
+         .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+         .trim()
+         .substring(0, 20); // Limit to 20 characters
+     } else {
+       // Fallback: extract company name from job description
+       const companyMatch = jobDescription.match(/Company[:\s]+([^\n]+)/i) || jobDescription.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:Consulting|Inc|LLC|Corp|Company)/i);
+       const companyName = companyMatch ? companyMatch[1].trim() : 'Company';
+       fileName = companyName
+         .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+         .trim()
+         .substring(0, 20); // Limit to 20 characters
+     }
     // Generate HTML for client-side PDF conversion
     const resumeHTML = await generateHTML(resumeContent, 'Professional Resume');
     const coverLetterHTML = await generateHTML(coverLetterContent, 'Cover Letter');
@@ -605,8 +505,8 @@ Resume ID: ${resumeId || 'demo-resume-id'}`;
       success: true,
       resumeHTML: resumeHTML,
       coverLetterHTML: coverLetterHTML,
-      resumeFileName: `${companyName}_Resume.pdf`,
-      coverLetterFileName: `${companyName}_CoverLetter.pdf`,
+             resumeFileName: `${fileName}_Resume.pdf`,
+       coverLetterFileName: `${fileName}_CoverLetter.pdf`,
       resumeContent: resumeContent,
       coverLetterContent: coverLetterContent,
       rateLimit: {
